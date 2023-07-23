@@ -18,9 +18,9 @@ skillMetadata:
           type: text
           label: Timer audio resource file
           value: beep4.mp3
-        - name: quiet_hours
+        - name: escalate_volume
           type: checkbox
-          label: Quiet Hours (mutes all notifications until disabled)
+          label: Increase alarm volume while alerting
           value: "false"
         - name: snooze_mins
           type: number

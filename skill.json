@@ -3,7 +3,7 @@
     "url": "https://github.com/OpenVoiceOS/skill-alerts",
     "summary": "A skill to schedule alarms, timers, and reminders",
     "short_description": "A skill to schedule alarms, timers, and reminders",
-    "description": "The skill provides functionality to create alarms, timers and reminders, remove them by name, time, or type, and ask for what is active. You may also silence all alerts and ask for a summary of what was missed if you were away, your device was off, or you had quiet hours enabled. Alarms and reminders may be set to recur daily or weekly. An active alert may be snoozed for a specified amount of time while it is active. Any alerts that are not acknowledged will be added to a list of missed alerts that may be read and cleared when requested.",
+    "description": "The skill provides functionality to create alarms, timers and reminders, remove them by name, time, or type, and ask for what is active. You may also silence all alerts and ask for a summary of what was missed if you were away or your device was off. Alarms and reminders may be set to recur daily or weekly. An active alert may be snoozed for a specified amount of time while it is active. Any alerts that are not acknowledged will be added to a list of missed alerts that may be read and cleared when requested.",
     "examples": [
         "Set an alarm for 8 AM.",
         "When is my next alarm?",
@@ -16,12 +16,9 @@
         "Cancel all alarms.",
         "Cancel all timers.",
         "Cancel all reminders.",
-        "Go to sleep.",
-        "Start quiet hours.",
         "Stop.",
         "Snooze.",
         "Snooze for 1 minute.",
-        "Wake up.",
         "What did I miss?",
         "Did I miss anything?"
     ],
@@ -30,14 +27,17 @@
     "systemDeps": false,
     "requirements": {
         "python": [
-            "combo_lock~=0.2",
-            "json_database~=0.5",
-            "ovos-utils~=0.0.28"
+            "combo_lock>=0.2",
+            "json_database>=0.5",
+            "ovos-bus-client>=0.0.3",
+            "ovos-utils>=0.0.32"
         ],
         "system": {},
         "skill": []
     },
     "incompatible_skills": [
+        "https://github.com/openvoiceos/skill-ovos-alarm",
+        "https://github.com/openvoiceos/skill-ovos-timer",
         "https://github.com/mycroftai/skill-reminder",
         "https://github.com/mycroftai/skill-alarm",
         "https://github.com/mycroftai/mycroft-timer"
@@ -67,8 +67,8 @@
         "schedule"
     ],
     "credits": [
-        "NeonGeckoCom",
-        "NeonDaniel"
+        "OpenVoiceOS",
+        "NeonGeckoCom"
     ],
     "skillname": "skill-alerts",
     "authorname": "OpenVoiceOS",

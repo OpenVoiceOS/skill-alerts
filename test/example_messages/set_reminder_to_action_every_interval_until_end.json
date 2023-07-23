@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_reminder",
+  "type": "skill-alerts.openvoiceos:create_reminder",
   "data": {
     "utterances": [
       "set a reminder to rotate logs every 8 hours until next sunday"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_reminder",
+    "intent_type": "skill-alerts.openvoiceos:create_reminder",
     "set": "set",
     "reminder": "reminder",
     "repeat": "every",
@@ -105,14 +105,6 @@
     "source": [
       "skills"
     ],
-    "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644971451.5294049,
-      "transcribed": 1644971451.5294049,
-      "save_transcript": 1.049041748046875e-05,
-      "text_parsers": 6.079673767089844e-05
-    }
+    "destination": "debug_cli"
   }
 }

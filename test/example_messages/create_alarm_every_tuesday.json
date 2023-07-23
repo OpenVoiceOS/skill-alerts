@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_alarm",
+  "type": "skill-alerts.openvoiceos:create_alarm",
   "data": {
     "utterances": [
       "set an alarm for 9 am every tuesday"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_alarm",
+    "intent_type": "skill-alerts.openvoiceos:create_alarm",
     "target": null,
     "confidence": 0.36764705882352944,
     "__tags__": [
@@ -89,14 +89,6 @@
       "skills"
     ],
     "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644629287.028714,
-      "transcribed": 1644629287.028714,
-      "save_transcript": 8.821487426757812e-06,
-      "text_parsers": 4.553794860839844e-05
-    },
-    "skill_id": "skill-alerts.neongeckocom"
+    "skill_id": "skill-alerts.openvoiceos"
   }
 }

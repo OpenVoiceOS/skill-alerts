@@ -30,7 +30,8 @@ import datetime
 import json
 
 from typing import Set, Optional, Union
-from neon_utils.logger import LOG
+from ovos_utils.log import LOG
+from ovos_utils.time import now_local
 from . import AlertType, AlertPriority, Weekdays
 
 
@@ -88,10 +89,6 @@ class Alert:
     @property
     def audio_file(self) -> Optional[str]:
         return self._data.get("audio_file")
-
-    @property
-    def script_filename(self) -> Optional[str]:
-        return self.data.get("script_filename")
 
     @property
     def is_expired(self) -> bool:
@@ -200,7 +197,7 @@ class Alert:
                repeat_frequency: Union[int, datetime.timedelta] = None,
                repeat_days: Set[Weekdays] = None,
                end_repeat: datetime.datetime = None,
-               audio_file: str = None, script_file: str = None,
+               audio_file: str = None,
                context: dict = None
                ):
         """
@@ -213,7 +210,6 @@ class Alert:
         :param repeat_days: set of weekdays for an alert to repeat
         :param end_repeat: datetime of final repeating alert occurrence
         :param audio_file: audio_file to playback on alert expiration
-        :param script_file: ncs filename to run on alert expiration
         :param context: Message context associated with alert
         """
         # Validate passed datetime objects
@@ -250,7 +246,6 @@ class Alert:
             "end_repeat": end_repeat,
             "alert_name": alert_name,
             "audio_file": audio_file,
-            "script_filename": script_file,
             "context": context
         }
         return Alert(data)

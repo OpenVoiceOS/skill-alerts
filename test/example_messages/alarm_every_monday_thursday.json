@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_alarm",
+  "type": "skill-alerts.openvoiceos:create_alarm",
   "data": {
     "utterances": [
       "wake me up every monday and thursday at 9 am"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_alarm",
+    "intent_type": "skill-alerts.openvoiceos:create_alarm",
     "target": null,
     "confidence": 0.24999999999999994,
     "__tags__": [
@@ -65,14 +65,6 @@
       "skills"
     ],
     "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644632303.2785375,
-      "transcribed": 1644632303.2785375,
-      "save_transcript": 7.867813110351562e-06,
-      "text_parsers": 2.5510787963867188e-05
-    },
-    "skill_id": "skill-alerts.neongeckocom"
+    "skill_id": "skill-alerts.openvoiceos"
   }
 }

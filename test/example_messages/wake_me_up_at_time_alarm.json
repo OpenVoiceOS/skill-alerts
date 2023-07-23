@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_alarm",
+  "type": "skill-alerts.openvoiceos:create_alarm",
   "data": {
     "utterances": [
-      "neon wake me up at 7 am"
+      "wake me up at 7 am"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_alarm",
+    "intent_type": "skill-alerts.openvoiceos:create_alarm",
     "target": null,
     "confidence": 0.19565217391304346,
     "__tags__": [
@@ -31,7 +31,7 @@
         "from_context": false
       }
     ],
-    "utterance": "neon wake me up at 7 am",
+    "utterance": "wake me up at 7 am",
     "alarm": "wake me up"
   },
   "context": {
@@ -40,14 +40,6 @@
       "skills"
     ],
     "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644629389.4842777,
-      "transcribed": 1644629389.4842777,
-      "save_transcript": 1.0967254638671875e-05,
-      "text_parsers": 6.29425048828125e-05
-    },
-    "skill_id": "skill-alerts.neongeckocom"
+    "skill_id": "skill-alerts.openvoiceos"
   }
 }

@@ -17,38 +17,39 @@
 # US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
 import datetime
+import datetime as dt
 import json
 import os
+import random
+import shutil
 import time
+import unittest
+from os import mkdir, remove
+from os.path import dirname, join, exists, isfile
+from threading import Event
+from unittest.mock import Mock
 
 import lingua_franca
 import pytest
-import random
-import sys
-import shutil
-import unittest
-import datetime as dt
-
-from threading import Event
-from os import mkdir, remove
-from os.path import dirname, join, exists, isfile
 from dateutil.tz import gettz
-from lingua_franca.format import nice_date_time, nice_duration
-from mock import Mock
-from mock.mock import call, patch
-from mycroft_bus_client import Message
+from lingua_franca import load_language
+from lingua_franca.format import nice_date_time, nice_time
+from ovos_bus_client import Message
+from ovos_config.config import Configuration
 from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.messagebus import FakeBus
-from lingua_franca import load_language
-
-from mycroft.util.format import nice_time
-
-sys.path.append(dirname(dirname(__file__)))
-from util import AlertType, AlertState, AlertPriority, Weekdays
-from util.alert import Alert
-from util.alert_manager import AlertManager, get_alert_id
+from ovos_utils.time import get_config_tz
+from ovos_utils.time import now_local
+from ovos_workshop.skills import OVOSSkill
+from skill_alerts import AlertSkill
+from skill_alerts.util import AlertType, AlertState, AlertPriority, Weekdays, EVERYDAY
+from skill_alerts.util.alert import Alert
+from skill_alerts.util.alert_manager import AlertManager, get_alert_id
+from skill_alerts.util.lf_extras import nice_duration
 
 examples_dir = join(dirname(__file__), "example_messages")
+
+config = Configuration()
 
 
 def _get_message_from_file(filename: str):
@@ -61,18 +62,15 @@ class TestSkill(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        from mycroft.skills.skill_loader import SkillLoader
-
         cls.bus = FakeBus()
-        cls.bus.run_in_thread()
-        skill_loader = SkillLoader(cls.bus, dirname(dirname(__file__)))
-        skill_loader.load()
-        cls.skill = skill_loader.instance
+
         cls.test_fs = join(dirname(__file__), "skill_fs")
         if not exists(cls.test_fs):
             mkdir(cls.test_fs)
-        cls.skill.settings_write_path = cls.test_fs
-        cls.skill.file_system.path = cls.test_fs
+
+        cls.skill = AlertSkill(bus=cls.bus,
+                               skill_id="skill-alerts.openvoiceos",
+                               alerts_path=cls.test_fs + "/alerts.json")
 
         # Override speak and speak_dialog to test passed arguments
         cls.skill.speak = Mock()
@@ -81,10 +79,6 @@ class TestSkill(unittest.TestCase):
         # Setup alerts
         load_language("en-us")
 
-        cls.valid_user = "test_user"
-        cls.invalid_user = "other_user"
-        valid_context = {"username": cls.valid_user}
-        invalid_context = {"username": cls.invalid_user}
         sea_tz = gettz("America/Los_Angeles")
         now_time = dt.datetime.now(sea_tz).replace(microsecond=0)
         next_alarm_1_time = now_time + dt.timedelta(days=1)
@@ -95,23 +89,18 @@ class TestSkill(unittest.TestCase):
         invalid_timer_time = now_time + dt.timedelta(minutes=1)
 
         cls.valid_alarm_1 = Alert.create(next_alarm_1_time, "Alarm 1",
-                                         AlertType.ALARM,
-                                         context=valid_context)
+                                         AlertType.ALARM)
         cls.valid_alarm_2 = Alert.create(next_alarm_2_time, "Alarm 2",
-                                         AlertType.ALARM,
-                                         context=valid_context)
+                                         AlertType.ALARM)
         cls.valid_alarm_3 = Alert.create(next_alarm_3_time, "Alarm 3",
-                                         AlertType.ALARM,
-                                         context=valid_context)
+                                         AlertType.ALARM)
         cls.valid_reminder = Alert.create(next_reminder_time, "Valid Reminder",
-                                          AlertType.REMINDER,
-                                          context=valid_context)
+                                          AlertType.REMINDER)
         cls.other_reminder = Alert.create(invalid_reminder_time,
                                           "Other Reminder",
-                                          AlertType.REMINDER,
-                                          context=invalid_context)
+                                          AlertType.REMINDER)
         cls.other_timer = Alert.create(invalid_timer_time, "Other Timer",
-                                       AlertType.TIMER, context=invalid_context)
+                                       AlertType.TIMER)
         for a in {cls.other_timer, cls.other_reminder, cls.valid_reminder,
                   cls.valid_alarm_3, cls.valid_alarm_1, cls.valid_alarm_2}:
             cls.skill.alert_manager.add_alert(a)
@@ -126,74 +115,9 @@ class TestSkill(unittest.TestCase):
 
     def test_00_skill_init(self):
         # Test any parameters expected to be set in init or initialize methods
-        from neon_utils.skills import NeonSkill
-        self.assertIsInstance(self.skill, NeonSkill)
-        # TODO: This patches import resolution; revert after proper packaging
-        # self.assertIsInstance(self.skill.alert_manager, AlertManager)
+        self.assertIsInstance(self.skill, OVOSSkill)
+        self.assertIsInstance(self.skill.alert_manager, AlertManager)
         self.assertTrue(hasattr(self.skill.alert_manager, "pending_alerts"))
-
-    def test_properties(self):
-        real_prefs = self.skill.preference_skill
-        mock_prefs = Mock()
-        settings = dict()
-        mock_prefs.return_value = settings
-        self.skill.preference_skill = mock_prefs
-
-        # speak_alarm
-        self.assertFalse(self.skill.speak_alarm)
-        settings['speak_alarm'] = True
-        self.assertTrue(self.skill.speak_alarm)
-        settings['speak_alarm'] = False
-        self.assertFalse(self.skill.speak_alarm)
-
-        # speak_timer
-        self.assertTrue(self.skill.speak_timer)
-        settings['speak_timer'] = False
-        self.assertFalse(self.skill.speak_timer)
-        settings['speak_timer'] = True
-        self.assertTrue(self.skill.speak_timer)
-
-        # alarm_sound_file
-        self.assertTrue(isfile(self.skill.alarm_sound_file))
-        test_file = join(dirname(__file__), 'test_sounds', 'alarm.mp3')
-        settings['sound_alarm'] = test_file
-        self.assertEqual(self.skill.alarm_sound_file, test_file)
-
-        # timer_sound_file
-        self.assertTrue(isfile(self.skill.timer_sound_file))
-        est_file = join(dirname(__file__), 'test_sounds', 'timer.mp3')
-        settings['sound_timer'] = test_file
-        self.assertEqual(self.skill.alarm_sound_file, test_file)
-
-        # quiet_hours
-        self.assertFalse(self.skill.quiet_hours)
-        settings['quiet_hours'] = True
-        self.assertTrue(self.skill.quiet_hours)
-        settings['quiet_hours'] = False
-        self.assertFalse(self.skill.quiet_hours)
-
-        # snooze_duration
-        self.assertEqual(self.skill.snooze_duration,
-                         datetime.timedelta(minutes=15))
-        settings['snooze_mins'] = 5
-        self.assertEqual(self.skill.snooze_duration,
-                         datetime.timedelta(minutes=5))
-        settings['snooze_mins'] = '10'
-        self.assertEqual(self.skill.snooze_duration,
-                         datetime.timedelta(minutes=15))
-
-        # alert_timeout_seconds
-        self.assertEqual(self.skill.alert_timeout_seconds, 60)
-        settings['timeout_min'] = 2
-        self.assertEqual(self.skill.alert_timeout_seconds, 120)
-        settings['timeout_min'] = '5'
-        self.assertEqual(self.skill.alert_timeout_seconds, 60)
-
-        # use_24hour
-        self.assertIsInstance(self.skill.use_24hour, bool)
-        # TODO: Better test here
-
-        self.skill.preference_skill = real_prefs
 
     def test_handle_create_alarm(self):
         real_confirm = self.skill.confirm_alert
@@ -205,8 +129,7 @@ class TestSkill(unittest.TestCase):
         self.skill.handle_create_alarm(invalid_message)
         self.skill.speak_dialog.assert_called_once()
         self.skill.speak_dialog.assert_called_with("error_no_time",
-                                                   {"kind": "alarm"},
-                                                   private=True)
+                                                   {"kind": "alarm"})
         self.skill.confirm_alert.assert_not_called()
 
         self.skill.handle_create_alarm(valid_message)
@@ -215,6 +138,18 @@ class TestSkill(unittest.TestCase):
                          AlertType.ALARM)
         self.assertEqual(self.skill.confirm_alert.call_args[0][1],
                          valid_message)
+
+        valid_every_day = _get_message_from_file("create_alarm_every_day.json")
+        self.skill.handle_create_alarm(valid_every_day)
+        self.skill.confirm_alert.assert_called()
+
+        self.assertEqual(self.skill.confirm_alert.call_args[0][1],
+                         valid_every_day)
+        alert = self.skill.confirm_alert.call_args[0][0]
+        self.assertEqual(alert.alert_type, AlertType.ALARM)
+        self.assertEqual(alert.repeat_days, EVERYDAY)
+        self.assertEqual(alert.next_expiration.hour, 9)
+        self.assertEqual(alert.next_expiration.minute, 0)
 
         self.skill.confirm_alert = real_confirm
 
@@ -228,8 +163,7 @@ class TestSkill(unittest.TestCase):
 
         self.skill.handle_create_timer(invalid_message)
         self.skill.speak_dialog.assert_called_once()
-        self.skill.speak_dialog.assert_called_with("error_no_duration",
-                                                   private=True)
+        self.skill.speak_dialog.assert_called_with("error_no_duration")
         self.skill.confirm_alert.assert_not_called()
 
         self.skill.handle_create_timer(valid_message)
@@ -256,8 +190,7 @@ class TestSkill(unittest.TestCase):
         self.skill.handle_create_reminder(invalid_message)
         self.skill.speak_dialog.assert_called_once()
         self.skill.speak_dialog.assert_called_with("error_no_time",
-                                                   {"kind": "reminder"},
-                                                   private=True)
+                                                   {"kind": "reminder"})
         self.skill.confirm_alert.assert_not_called()
 
         self.skill.handle_create_reminder(valid_message)
@@ -292,14 +225,10 @@ class TestSkill(unittest.TestCase):
         self.skill.handle_create_reminder = real_method
 
     def test_handle_next_alert(self):
-        valid_message_alarm = Message("test", {"alarm": "alarm"},
-                                      {"username": self.valid_user})
-        valid_message_timer = Message("test", {"timer": "timer"},
-                                      {"username": self.valid_user})
-        valid_message_reminder = Message("test", {"reminder": "reminder"},
-                                         {"username": self.valid_user})
-        valid_message_all = Message("test", {"alert": "alert"},
-                                    {"username": self.valid_user})
+        valid_message_alarm = Message("test", {"alarm": "alarm"})
+        valid_message_timer = Message("test", {"timer": "timer"})
+        valid_message_reminder = Message("test", {"reminder": "reminder"})
+        valid_message_all = Message("test", {"alert": "alert"})
 
         self.skill.handle_next_alert(valid_message_alarm)
         self.skill.speak_dialog.assert_called_with(
@@ -307,14 +236,12 @@ class TestSkill(unittest.TestCase):
             {"kind": "alarm",
              "name": self.valid_alarm_1.alert_name,
              "time": nice_time(self.valid_alarm_1.next_expiration,
-                               use_ampm=True)},
-            private=True)
+                               use_ampm=True)})
 
         self.skill.handle_next_alert(valid_message_timer)
         self.skill.speak_dialog.assert_called_with(
             "list_alert_none_upcoming",
-            {"kind": "timer"},
-            private=True)
+            {"kind": "timer"})
 
         self.skill.handle_next_alert(valid_message_reminder)
         self.skill.speak_dialog.assert_called_with(
@@ -322,8 +249,8 @@ class TestSkill(unittest.TestCase):
             {"kind": "reminder",
              "name": self.valid_reminder.alert_name,
              "time": nice_time(self.valid_reminder.next_expiration,
-                               use_ampm=True)},
-            private=True)
+                               use_ampm=True)}
+        )
 
         self.skill.handle_next_alert(valid_message_all)
         self.skill.speak_dialog.assert_called_with(
@@ -331,18 +258,13 @@ class TestSkill(unittest.TestCase):
             {"kind": "alert",
              "name": self.valid_alarm_1.alert_name,
              "time": nice_time(self.valid_alarm_1.next_expiration,
-                               use_ampm=True)},
-            private=True)
+                               use_ampm=True)})
 
     def test_handle_list_alerts(self):
-        valid_message_alarm = Message("test", {"alarm": "alarm"},
-                                      {"username": self.valid_user})
-        valid_message_timer = Message("test", {"timer": "timer"},
-                                      {"username": self.valid_user})
-        valid_message_reminder = Message("test", {"reminder": "reminder"},
-                                         {"username": self.valid_user})
-        valid_message_all = Message("test", {"alert": "alert"},
-                                    {"username": self.valid_user})
+        valid_message_alarm = Message("test", {"alarm": "alarm"})
+        valid_message_timer = Message("test", {"timer": "timer"})
+        valid_message_reminder = Message("test", {"reminder": "reminder"})
+        valid_message_all = Message("test", {"alert": "alert"})
 
         self.skill.handle_list_alerts(valid_message_alarm)
         self.skill.speak.assert_called()
@@ -354,8 +276,7 @@ class TestSkill(unittest.TestCase):
 
         self.skill.handle_list_alerts(valid_message_timer)
         self.skill.speak_dialog.assert_called_with("list_alert_none_upcoming",
-                                                   {"kind": "timer"},
-                                                   private=True)
+                                                   {"kind": "timer"})
 
         self.skill.handle_list_alerts(valid_message_reminder)
         reminder_string = self.skill.speak.call_args[0][0]
@@ -369,6 +290,41 @@ class TestSkill(unittest.TestCase):
         for alert in {self.valid_alarm_1, self.valid_alarm_2,
                       self.valid_alarm_3, self.valid_reminder}:
             self.assertIn(f"\n{alert.alert_name} - ", all_string)
+
+    def test_alt_handle_list_alerts(self):
+        real_list_alerts = self.skill.handle_list_alerts
+        test_list_alerts = Mock()
+        self.skill.handle_list_alerts = test_list_alerts
+
+        test_alert_message = Message('test', {'utterance': 'what are my alerts'})
+        self.skill.alt_handle_list_alerts(test_alert_message)
+        test_list_alerts.assert_called_with(test_alert_message)
+        self.assertTrue(test_alert_message.data['alert'])
+
+        test_timer_message = Message('test', {'utterance': 'tell me my timers'})
+        self.skill.alt_handle_list_alerts(test_timer_message)
+        test_list_alerts.assert_called_with(test_timer_message)
+        self.assertTrue(test_timer_message.data['timer'])
+
+        test_alarm_message = Message(
+            'test', {'utterance': 'are there any pending alarms'})
+        self.skill.alt_handle_list_alerts(test_alarm_message)
+        test_list_alerts.assert_called_with(test_alarm_message)
+        self.assertTrue(test_alarm_message.data['alarm'])
+
+        test_reminder_message = Message(
+            'test', {'utterance': 'do I have any reminders'})
+        self.skill.alt_handle_list_alerts(test_reminder_message)
+        test_list_alerts.assert_called_with(test_reminder_message)
+        self.assertTrue(test_reminder_message.data['reminder'])
+
+        test_event_message = Message(
+            'test', {'utterance': 'do I have any upcoming events'})
+        self.skill.alt_handle_list_alerts(test_event_message)
+        test_list_alerts.assert_called_with(test_event_message)
+        self.assertTrue(test_event_message.data['event'])
+
+        self.skill.handle_list_alerts = real_list_alerts
 
     def test_handle_timer_status(self):
 
@@ -390,8 +346,7 @@ class TestSkill(unittest.TestCase):
         # No active timers
         self.skill.handle_timer_status(valid_message)
         self.skill.speak_dialog.assert_called_once()
-        self.skill.speak_dialog.assert_called_with("timer_status_none_active",
-                                                   private=True)
+        self.skill.speak_dialog.assert_called_with("timer_status_none_active")
 
         # Single active timer not specifically requested
         self.skill.alert_manager.add_alert(long_timer)
@@ -429,94 +384,32 @@ class TestSkill(unittest.TestCase):
         self.skill.alert_manager.rm_alert(get_alert_id(test_timer))
         self.skill._display_timer_gui = real_timer_status
 
-    def test_handle_start_quiet_hours(self):
-        real_method = self.skill.update_skill_settings
-        self.skill.update_skill_settings = Mock()
-
-        message = Message("test", {"quiet_hours_start": "start"},
-                          {"username": "tester",
-                           "neon_should_respond": True})
-        self.skill.handle_start_quiet_hours(message)
-        self.skill.speak_dialog.assert_called_once()
-        self.skill.speak_dialog.assert_called_with("quiet_hours_start",
-                                                   private=True)
-
-        self.skill.update_skill_settings.assert_called_once()
-        self.skill.update_skill_settings.assert_called_with(
-            {"quiet_hours": True}, message)
-
-        self.skill.update_skill_settings = real_method
-
-    def test_handle_end_quiet_hours(self):
-        quiet_hours = True
-
-        def preference_skill(_=None):
-            return {"quiet_hours": quiet_hours}
-
-        real_pref_skill = self.skill.preference_skill
-        self.skill.preference_skill = preference_skill
-        real_update_settings = self.skill.update_skill_settings
-        self.skill.update_skill_settings = Mock()
-
-        test_message = Message("test", {"quiet_hours_end": ""},
-                               {"username": self.valid_user,
-                                "neon_should_respond": True})
-
-        # Test end active quiet hours, nothing missed
-        self.skill.handle_end_quiet_hours(test_message)
-        first_call = self.skill.speak_dialog.call_args_list[0]
-        second_call = self.skill.speak_dialog.call_args_list[1]
-        self.assertEqual(first_call,
-                         call("quiet_hours_end", private=True))
-        self.assertEqual(second_call,
-                         call("list_alert_none_missed", private=True))
-        self.skill.update_skill_settings.assert_called_with(
-            {"quiet_hours": False}, test_message)
-
-        # Test end active quiet hours, already inactive
-        self.skill.speak_dialog.reset_mock()
-        self.skill.update_skill_settings.reset_mock()
-        quiet_hours = False
-        self.skill.handle_end_quiet_hours(test_message)
-        self.skill.update_skill_settings.assert_not_called()
-        self.skill.speak_dialog.assert_called_once()
-        self.skill.speak_dialog.assert_called_with("list_alert_none_missed",
-                                                   private=True)
-
-        # TODO: Test with missed alerts DM
-
-        self.skill.preference_skill = real_pref_skill
-        self.skill.update_skill_settings = real_update_settings
-
     def test_handle_cancel_alert(self):
-        cancel_test_user = "test_user_cancellation"
-        valid_context = {"username": cancel_test_user}
-        tz = self.skill._get_user_tz()
-        now_time = dt.datetime.now(tz).replace(microsecond=0)
+        real_dismiss_from_gui = self.skill.alert_manager.dismiss_alert_from_gui
+        mock_dismiss_gui = Mock()
+        self.skill.alert_manager.dismiss_alert_from_gui = mock_dismiss_gui
+        real_update_homescreen = self.skill._update_homescreen
+        mock_update_homescreen = Mock()
+        self.skill._update_homescreen = mock_update_homescreen
+
+        now_time = now_local().replace(microsecond=0)
         alarm_1_time = now_time + dt.timedelta(days=1)
         alarm_2_time = alarm_1_time + dt.timedelta(hours=1)
         alarm_3_time = now_time.replace(hour=9, minute=30, second=0) + \
-            dt.timedelta(days=1)
+                       dt.timedelta(days=1)
         reminder_time = now_time + dt.timedelta(days=2)
         timer_1_time = now_time + dt.timedelta(minutes=5)
         timer_2_time = now_time + dt.timedelta(minutes=10)
 
         # Define alerts
-        tomorrow_alarm = Alert.create(alarm_1_time, alert_type=AlertType.ALARM,
-                                      context=valid_context)
-        later_alarm = Alert.create(alarm_2_time, alert_type=AlertType.ALARM,
-                                   context=valid_context)
-        morning_alarm = Alert.create(alarm_3_time, alert_type=AlertType.ALARM,
-                                     context=valid_context)
+        tomorrow_alarm = Alert.create(alarm_1_time, alert_type=AlertType.ALARM)
+        later_alarm = Alert.create(alarm_2_time, alert_type=AlertType.ALARM)
+        morning_alarm = Alert.create(alarm_3_time, alert_type=AlertType.ALARM)
         trash_reminder = Alert.create(reminder_time, "take out garbage",
-                                      AlertType.REMINDER,
-                                      context=valid_context)
-        pasta_timer = Alert.create(timer_1_time, "pasta", AlertType.TIMER,
-                                   context=valid_context)
-        unnamed_timer = Alert.create(timer_1_time, alert_type=AlertType.TIMER,
-                                     context=valid_context)
-        oven_timer = Alert.create(timer_2_time, "cherry pie", AlertType.TIMER,
-                                  context=valid_context)
+                                      AlertType.REMINDER)
+        pasta_timer = Alert.create(timer_1_time, "pasta", AlertType.TIMER)
+        unnamed_timer = Alert.create(timer_1_time, alert_type=AlertType.TIMER)
+        oven_timer = Alert.create(timer_2_time, "cherry pie", AlertType.TIMER)
         for a in (tomorrow_alarm, later_alarm, morning_alarm, trash_reminder,
                   pasta_timer, oven_timer, unnamed_timer):
             self.skill.alert_manager.add_alert(a)
@@ -524,20 +417,20 @@ class TestSkill(unittest.TestCase):
                           self.skill.alert_manager.pending_alerts.keys())
 
         # Cancel only alert of type
-        message = Message("test", {"cancel": "cancel",
-                                   "reminder": "reminder"}, valid_context)
+        message = Message("test", {"cancel": "cancel", "reminder": "reminder"})
         self.skill.handle_cancel_alert(message)
-        self.assertNotIn(get_alert_id(trash_reminder),
+        alert_id = get_alert_id(trash_reminder)
+        self.assertNotIn(alert_id,
                          self.skill.alert_manager.pending_alerts.keys())
+        mock_dismiss_gui.assert_called_with(alert_id)
+        mock_update_homescreen.assert_called_with(False, False)
         self.skill.speak_dialog.assert_called_with(
             "confirm_cancel_alert", {"kind": "reminder",
-                                     "name": trash_reminder.alert_name},
-            private=True)
+                                     "name": trash_reminder.alert_name})
         # Cancel no alerts of requested type
         self.skill.handle_cancel_alert(message)
         self.skill.speak_dialog.assert_called_with(
-            "error_no_scheduled_kind_to_cancel", {"kind": "reminder"},
-            private=True)
+            "error_no_scheduled_kind_to_cancel", {"kind": "reminder"})
 
         # Cancel no match
         message = Message("test",
@@ -555,11 +448,10 @@ class TestSkill(unittest.TestCase):
                                    "start_token": 3,
                                    "end_token": 3
                                }
-                           ]}, valid_context)
+                           ]})
         pending = self.skill.alert_manager.pending_alerts.keys()
         self.skill.handle_cancel_alert(message)
-        self.skill.speak_dialog.assert_called_with("error_nothing_to_cancel",
-                                                   private=True)
+        self.skill.speak_dialog.assert_called_with("error_nothing_to_cancel")
         self.assertEqual(pending,
                          self.skill.alert_manager.pending_alerts.keys())
 
@@ -579,18 +471,20 @@ class TestSkill(unittest.TestCase):
                                    "start_token": 3,
                                    "end_token": 3
                                }
-                           ]}, valid_context)
-        self.assertIn(get_alert_id(pasta_timer),
+                           ]})
+        alert_id = get_alert_id(pasta_timer)
+        self.assertIn(alert_id,
                       self.skill.alert_manager.pending_alerts.keys())
         self.skill.handle_cancel_alert(message)
-        self.assertNotIn(get_alert_id(pasta_timer),
+        self.assertNotIn(alert_id,
                          self.skill.alert_manager.pending_alerts.keys())
         self.skill.speak_dialog.assert_called_with(
             "confirm_cancel_alert", {"kind": "timer",
-                                     "name": pasta_timer.alert_name},
-            private=True)
+                                     "name": pasta_timer.alert_name})
+        mock_dismiss_gui.assert_called_with(alert_id)
+        mock_update_homescreen.assert_called_with(True, False)
 
-        # Cancel match time  9:30 AM alarm
+        # Cancel match time 9:30 AM alarm
         message = Message("test",
                           {"cancel": "cancel",
                            "alarm": "alarm",
@@ -606,16 +500,18 @@ class TestSkill(unittest.TestCase):
                                    "start_token": 4,
                                    "end_token": 4
                                }
-                           ]}, valid_context)
-        self.assertIn(get_alert_id(morning_alarm),
+                           ]})
+        alert_id = get_alert_id(morning_alarm)
+        self.assertIn(alert_id,
                       self.skill.alert_manager.pending_alerts.keys())
         self.skill.handle_cancel_alert(message)
-        self.assertNotIn(get_alert_id(morning_alarm),
+        self.assertNotIn(alert_id,
                          self.skill.alert_manager.pending_alerts.keys())
         self.skill.speak_dialog.assert_called_with(
             "confirm_cancel_alert", {"kind": "alarm",
-                                     "name": morning_alarm.alert_name},
-            private=True)
+                                     "name": morning_alarm.alert_name})
+        mock_dismiss_gui.assert_called_with(alert_id)
+        mock_update_homescreen.assert_called_with(False, True)
 
         # Cancel partial name oven (cherry pie)
         message = Message("test",
@@ -633,34 +529,90 @@ class TestSkill(unittest.TestCase):
                                    "start_token": 3,
                                    "end_token": 3
                                }
-                           ]}, valid_context)
-        self.assertIn(get_alert_id(oven_timer),
+                           ]})
+        alert_id = get_alert_id(oven_timer)
+        self.assertIn(alert_id,
                       self.skill.alert_manager.pending_alerts.keys())
         self.skill.handle_cancel_alert(message)
-        self.assertNotIn(get_alert_id(oven_timer),
+        self.assertNotIn(alert_id,
                          self.skill.alert_manager.pending_alerts.keys())
         self.skill.speak_dialog.assert_called_with(
             "confirm_cancel_alert", {"kind": "timer",
-                                     "name": oven_timer.alert_name},
-            private=True)
+                                     "name": oven_timer.alert_name})
+        mock_dismiss_gui.assert_called_with(alert_id)
+        mock_update_homescreen.assert_called_with(True, False)
 
         # Cancel all valid
+        all_alerts = self.skill.alert_manager.get_user_alerts()['pending']
         message = Message("test", {"cancel": "cancel",
                                    "alert": "alert",
-                                   "all": "all"}, valid_context)
+                                   "all": "all"})
         self.skill.handle_cancel_alert(message)
         self.skill.speak_dialog.assert_called_with("confirm_cancel_all",
-                                                   {"kind": "alert"},
-                                                   private=True)
+                                                   {"kind": "alert"})
         self.assertEqual(
-            self.skill.alert_manager.get_user_alerts(cancel_test_user),
+            self.skill.alert_manager.get_all_alerts(),
             {"missed": list(), "active": list(), "pending": list()}
         )
+        mock_dismiss_gui.assert_has_calls(all_alerts, True)
 
         # Cancel all nothing to cancel
         self.skill.handle_cancel_alert(message)
-        self.skill.speak_dialog.assert_called_with("error_nothing_to_cancel",
-                                                   private=True)
+        self.skill.speak_dialog.assert_called_with("error_nothing_to_cancel")
+        self.skill.alert_manager.dismiss_alert_from_gui = real_dismiss_from_gui
+        self.skill._update_homescreen = real_update_homescreen
+
+    def test_snooze_alert(self):
+        real_snooze_alert = self.skill.alert_manager.snooze_alert
+        self.skill.alert_manager.snooze_alert = Mock()
+
+        sea_tz = gettz("America/Los_Angeles")
+        now_time = dt.datetime.now(sea_tz).replace(microsecond=0)
+
+        # Test default snooze
+        alert = Alert.create(now_time, "test", AlertType.ALARM)
+        alert_id = get_alert_id(alert)
+        message_no_time = Message("test")
+        self.skill._snooze_alert(message_no_time, alert, anchor_time=now_time)
+        self.skill.alert_manager.snooze_alert.assert_called_with(
+            alert_id, self.skill.snooze_duration)
+        self.skill.speak_dialog.assert_called_with(
+            "confirm_snooze_alert",
+            {"name": alert.alert_name,
+             "duration": nice_duration(self.skill.snooze_duration)})
+
+        # Test given duration
+        alert = Alert.create(now_time, "test", AlertType.ALARM)
+        alert_id = get_alert_id(alert)
+        message_duration = Message("test",
+                                   {"utterances": ["snooze for 5 minutes"]})
+        delta = dt.timedelta(minutes=5)
+        self.skill._snooze_alert(message_duration, alert, anchor_time=now_time)
+        self.skill.alert_manager.snooze_alert.assert_called_with(
+            alert_id, delta)
+        self.skill.speak_dialog.assert_called_with(
+            "confirm_snooze_alert",
+            {"name": alert.alert_name,
+             "duration": nice_duration(delta)})
+
+        # Test specified time
+        alert = Alert.create(now_time, "test", AlertType.ALARM)
+        alert_id = get_alert_id(alert)
+        message_newtime = Message("test",
+                                  {"utterances": ["snooze until 10 PM"]})
+        self.skill._snooze_alert(message_newtime, alert, anchor_time=now_time)
+        new_time = now_time.replace(hour=22, minute=0, second=0)
+        if new_time < now_time:
+            new_time = new_time + dt.timedelta(days=1)
+        delta = new_time - now_time
+        self.skill.alert_manager.snooze_alert.assert_called_with(
+            alert_id, delta)
+        self.skill.speak_dialog.assert_called_with(
+            "confirm_snooze_alert",
+            {"name": alert.alert_name,
+             "duration": nice_duration(delta)})
+
+        self.skill.alert_manager.snooze_alert = real_snooze_alert
 
     def test_confirm_alert(self):
         # TODO
@@ -705,31 +657,6 @@ class TestSkill(unittest.TestCase):
     def test_get_alert_type_from_intent(self):
         # TODO
         pass
-
-    @patch('neon_utils.configuration_utils._safe_mycroft_config')
-    def test_get_user_tz(self, get_location):
-        mock_username = 'test_user'
-        mock_userdata = {'user': {'username': mock_username}}
-        message = Message('test', {}, {'username': mock_username,
-                                       'user_profiles': [mock_userdata]})
-
-        # Test Default
-        config = dict(self.skill.config_core)
-        config['location'] = {
-            'city': None,
-            'timezone': None
-        }
-        get_location.return_value = config
-        # self.assertEqual(self.skill._get_user_tz(message), default_timezone())
-
-        # Test Configured
-        mock_userdata['location'] = {'tz': 'America/Los_Angeles'}
-        self.assertEqual(self.skill._get_user_tz(message),
-                         gettz('America/Los_Angeles'))
-
-        mock_userdata['location'] = {'tz': 'America/New_York'}
-        self.assertEqual(self.skill._get_user_tz(message),
-                         gettz('America/New_York'))
 
     def test_get_alert_dialog_data(self):
         real_translate = self.skill.translate
@@ -906,7 +833,7 @@ class TestAlert(unittest.TestCase):
             AlertPriority.HIGHEST.value,
             3600, None,
             end_repeat_valid,
-            "audio_file", "script_file",
+            "audio_file",
             {"testing": True}
         )
 
@@ -933,7 +860,7 @@ class TestAlert(unittest.TestCase):
             AlertPriority.HIGHEST.value,
             3600, None,
             end_repeat_valid,
-            "audio_file", "script_file",
+            "audio_file",
             {"testing": True}
         )
 
@@ -948,7 +875,6 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(future_alert_no_repeat.context, {"testing": True})
         self.assertEqual(future_alert_no_repeat.alert_name, "test alert name")
         self.assertEqual(future_alert_no_repeat.audio_file, "audio_file")
-        self.assertEqual(future_alert_no_repeat.script_filename, "script_file")
         self.assertFalse(future_alert_no_repeat.is_expired)
         self.assertEqual(future_alert_no_repeat.next_expiration,
                          now_time_valid.replace(microsecond=0) +
@@ -962,7 +888,7 @@ class TestAlert(unittest.TestCase):
             AlertType.REMINDER,
             AlertPriority.AVERAGE.value,
             None, None, None,
-            "audio_file", "script_file",
+            "audio_file",
             {"testing": True}
         )
         # Test alert properties
@@ -976,8 +902,6 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(expired_alert_no_repeat.alert_name,
                          "expired alert name")
         self.assertEqual(expired_alert_no_repeat.audio_file, "audio_file")
-        self.assertEqual(expired_alert_no_repeat.script_filename,
-                         "script_file")
         self.assertTrue(expired_alert_no_repeat.is_expired)
         self.assertIsNone(expired_alert_no_repeat.next_expiration)
         self.assertLessEqual(expired_alert_no_repeat.time_to_expiration.total_seconds(), 0)
@@ -1042,11 +966,11 @@ class TestAlert(unittest.TestCase):
             context=original_context
         )
         self.assertEqual(alert.context, original_context)
-        alert.add_context({"ident": "ident"})
-        self.assertEqual(alert.context, {"ident": "ident",
+        alert.add_context({"alert_id": "ident"})
+        self.assertEqual(alert.context, {"alert_id": "ident",
                                          "testing": True})
-        alert.add_context({"ident": "new_ident"})
-        self.assertEqual(alert.context, {"ident": "new_ident",
+        alert.add_context({"alert_id": "new_ident"})
+        self.assertEqual(alert.context, {"alert_id": "new_ident",
                                          "testing": True})
 
 
@@ -1191,7 +1115,7 @@ class TestAlertManager(unittest.TestCase):
         missed_alert_time = now_time - dt.timedelta(hours=1)
         missed_alert_ident = str(time.time())
         alert = Alert.create(missed_alert_time, "missed test alert",
-                             context={'ident': missed_alert_ident})
+                             context={"alert_id": missed_alert_ident})
         manager._active_alerts[missed_alert_ident] = alert
         manager.mark_alert_missed(missed_alert_ident)
         with open(join(self.manager_path, 'alerts.json')) as f:
@@ -1250,32 +1174,6 @@ class TestAlertManager(unittest.TestCase):
 
         remove(test_file)
 
-    def test_get_user_alerts(self):
-        from util.alert_manager import get_alert_user
-        alert_manager = self._init_alert_manager()
-        now_time = dt.datetime.now(dt.timezone.utc)
-        for i in range(10):
-            if i in range(5):
-                user = "test_user"
-            else:
-                user = "other_user"
-            alert_time = now_time + dt.timedelta(minutes=random.randint(1, 60))
-            alert = Alert.create(alert_time, context={"user": user})
-            alert_manager.add_alert(alert)
-
-        test_user_alerts = alert_manager.get_user_alerts("test_user")
-        other_user_alerts = alert_manager.get_user_alerts("other_user")
-        self.assertEqual(len(test_user_alerts["pending"]), 5)
-        self.assertEqual(len(other_user_alerts["pending"]), 5)
-        self.assertTrue(all([get_alert_user(alert) == "test_user" for alert in
-                             [*test_user_alerts["pending"],
-                              *test_user_alerts["active"],
-                              *test_user_alerts["missed"]]]))
-        self.assertTrue(all([get_alert_user(alert) == "other_user" for alert in
-                             [*other_user_alerts["pending"],
-                              *other_user_alerts["active"],
-                              *other_user_alerts["missed"]]]))
-
     def test_get_all_alerts(self):
         alert_manager = self._init_alert_manager()
         now_time = dt.datetime.now(dt.timezone.utc)
@@ -1294,32 +1192,18 @@ class TestAlertManager(unittest.TestCase):
             self.assertLessEqual(all_alerts["pending"][i - 1].next_expiration,
                                  all_alerts["pending"][i].next_expiration)
 
-    def test_get_alert_user(self):
-        from util.alert_manager import get_alert_user, _DEFAULT_USER
-        test_user = "tester"
-        alert_time = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)
-        alert_no_user = Alert.create(alert_time)
-        alert_with_user = Alert.create(alert_time, context={"user": test_user})
-        self.assertEqual(get_alert_user(alert_no_user), _DEFAULT_USER)
-        self.assertEqual(get_alert_user(alert_with_user), test_user)
-
-        alert_no_user.add_context({"user": test_user})
-        self.assertEqual(get_alert_user(alert_no_user), test_user)
-        alert_no_user.add_context({"user": "new_user"})
-        self.assertEqual(get_alert_user(alert_no_user), "new_user")
-
     def test_get_alert_id(self):
-        from util.alert_manager import get_alert_id
+        from skill_alerts.util.alert_manager import get_alert_id
         alert_time = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)
         alert_no_id = Alert.create(alert_time)
-        alert_with_id = Alert.create(alert_time, context={"ident": "test"})
+        alert_with_id = Alert.create(alert_time, context={"alert_id": "test"})
 
         self.assertIsNone(get_alert_id(alert_no_id))
         self.assertEqual(get_alert_id(alert_with_id), "test")
 
     def test_sort_alerts_list(self):
         from copy import deepcopy
-        from util.alert_manager import sort_alerts_list
+        from skill_alerts.util.alert_manager import sort_alerts_list
         now_time = dt.datetime.now(dt.timezone.utc)
         alerts = list()
 
@@ -1337,7 +1221,7 @@ class TestAlertManager(unittest.TestCase):
                                  alerts[i].next_expiration)
 
     def test_get_alert_by_type(self):
-        from util.alert_manager import get_alerts_by_type
+        from skill_alerts.util.alert_manager import get_alerts_by_type
         now_time = dt.datetime.now(dt.timezone.utc)
         alerts = list()
 
@@ -1425,7 +1309,7 @@ class TestAlertManager(unittest.TestCase):
 
 class TestParseUtils(unittest.TestCase):
     def test_round_nearest_minute(self):
-        from util.parse_utils import round_nearest_minute
+        from skill_alerts.util.parse_utils import round_nearest_minute
         now_time = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
         alert_time = now_time + dt.timedelta(minutes=9, seconds=5)
         rounded = round_nearest_minute(alert_time)
@@ -1435,7 +1319,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertEqual(rounded, alert_time.replace(second=0))
 
     def test_spoken_time_remaining(self):
-        from util.parse_utils import spoken_time_remaining
+        from skill_alerts.util.parse_utils import spoken_time_remaining
         now_time = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
         seconds_alert = now_time + dt.timedelta(minutes=59, seconds=59)
         to_speak = spoken_time_remaining(seconds_alert, now_time)
@@ -1471,7 +1355,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertEqual(to_speak, "eight days")
 
     def test_get_default_alert_name(self):
-        from util.parse_utils import get_default_alert_name
+        from skill_alerts.util.parse_utils import get_default_alert_name
         now_time = dt.datetime.now(dt.timezone.utc)
         timer_time = now_time + dt.timedelta(minutes=10)
         self.assertEqual(get_default_alert_name(timer_time,
@@ -1501,7 +1385,7 @@ class TestParseUtils(unittest.TestCase):
                          "20:00 reminder")
 
     def test_tokenize_utterance_alarm(self):
-        from util.parse_utils import tokenize_utterance
+        from skill_alerts.util.parse_utils import tokenize_utterance
 
         daily = _get_message_from_file("create_alarm_daily.json")
         tokens = tokenize_utterance(daily)
@@ -1524,7 +1408,7 @@ class TestParseUtils(unittest.TestCase):
 
         wakeup_at = _get_message_from_file("wake_me_up_at_time_alarm.json")
         tokens = tokenize_utterance(wakeup_at)
-        self.assertEqual(tokens, ['neon', 'wake me up', 'at 7 am'])
+        self.assertEqual(tokens, ['wake me up', 'at 7 am'])
 
         wakeup_in = _get_message_from_file("wake_me_up_in_time_alarm.json")
         tokens = tokenize_utterance(wakeup_in)
@@ -1541,7 +1425,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertEqual(tokens, ['alarm', 'in 30 minutes'])
 
     def test_get_unmatched_tokens_alarm(self):
-        from util.parse_utils import get_unmatched_tokens
+        from skill_alerts.util.parse_utils import get_unmatched_tokens
 
         daily = _get_message_from_file("create_alarm_daily.json")
         tokens = get_unmatched_tokens(daily)
@@ -1565,7 +1449,7 @@ class TestParseUtils(unittest.TestCase):
         wakeup_at = _get_message_from_file("wake_me_up_at_time_alarm.json")
         tokens = get_unmatched_tokens(wakeup_at)
         self.assertIsInstance(tokens, list)
-        self.assertEqual(tokens, ['neon', 'at 7 am'])
+        self.assertEqual(tokens, ['at 7 am'])
 
         wakeup_in = _get_message_from_file("wake_me_up_in_time_alarm.json")
         tokens = get_unmatched_tokens(wakeup_in)
@@ -1578,7 +1462,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertEqual(tokens, ['monday and thursday at 9 am'])
 
     def test_parse_repeat_from_message(self):
-        from util.parse_utils import parse_repeat_from_message, \
+        from skill_alerts.util.parse_utils import parse_repeat_from_message, \
             tokenize_utterance
 
         daily = _get_message_from_file("create_alarm_daily.json")
@@ -1651,7 +1535,7 @@ class TestParseUtils(unittest.TestCase):
                                   "until", "next sunday"])
 
     def test_parse_end_condition_from_message(self):
-        from util.parse_utils import parse_end_condition_from_message
+        from skill_alerts.util.parse_utils import parse_end_condition_from_message
         now_time = dt.datetime.now(dt.timezone.utc)
 
         for_the_next_four_weeks = _get_message_from_file(
@@ -1676,7 +1560,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertGreaterEqual(next_sunday, now_time)
 
     def test_parse_alert_time_from_message_alarm(self):
-        from util.parse_utils import parse_alert_time_from_message, \
+        from skill_alerts.util.parse_utils import parse_alert_time_from_message, \
             tokenize_utterance
 
         daily = _get_message_from_file("create_alarm_daily.json")
@@ -1723,11 +1607,11 @@ class TestParseUtils(unittest.TestCase):
             _get_message_from_file("alarm_every_monday_thursday.json")
         alert_time = parse_alert_time_from_message(multi_day_repeat)
         self.assertIsInstance(alert_time, dt.datetime)
-        self.assertEqual(alert_time.tzinfo, dt.timezone.utc)
+        self.assertEqual(alert_time.tzinfo, get_config_tz())
         self.assertEqual(alert_time.time(), dt.time(hour=9))
 
     def test_parse_alert_time_from_message_timer(self):
-        from util.parse_utils import parse_alert_time_from_message
+        from skill_alerts.util.parse_utils import parse_alert_time_from_message
         sea_tz = gettz("America/Los_Angeles")
         no_name_10_minutes = _get_message_from_file("set_time_timer.json")
         baking_12_minutes = _get_message_from_file("start_named_timer.json")
@@ -1760,12 +1644,8 @@ class TestParseUtils(unittest.TestCase):
         # TODO
         pass
 
-    def test_parse_script_file_from_message(self):
-        # TODO
-        pass
-
     def test_parse_alert_name_from_message(self):
-        from util.parse_utils import parse_alert_name_from_message
+        from skill_alerts.util.parse_utils import parse_alert_name_from_message
         monday_thursday_alarm = _get_message_from_file(
             "alarm_every_monday_thursday.json")
         daily_alarm = _get_message_from_file("create_alarm_daily.json")
@@ -1882,53 +1762,8 @@ class TestParseUtils(unittest.TestCase):
                                                        articles=articles),
                          "rotate logs")
 
-    def test_parse_alert_context_from_message(self):
-        from util.parse_utils import parse_alert_context_from_message, \
-            _DEFAULT_USER
-        test_message_no_context = Message("test", {}, {})
-        test_message_local_user = Message("test", {},
-                                          {"user": "local",
-                                           "timing": {
-                                               "handle_utterance":
-                                                   1644629287.028714,
-                                               "transcribed":
-                                                   1644629287.028714,
-                                               "save_transcript":
-                                                   8.821487426757812e-06,
-                                               "text_parsers":
-                                                   4.553794860839844e-05
-                                           },
-                                           "ident": "1644629287"
-                                           })
-        test_message_klat_data = Message("test", {}, {"user": "server_user",
-                                                      "klat_data": {
-                                                          "cid": "test_cid",
-                                                          "sid": "test_sid",
-                                                          "domain": "Private",
-                                                          "flac_filename": "ff"
-                                                      },
-                                                      })
-
-        no_context = parse_alert_context_from_message(test_message_no_context)
-        self.assertEqual(no_context["user"], _DEFAULT_USER)
-        self.assertIsInstance(no_context["ident"], str)
-        self.assertIsInstance(no_context["created"], float)
-
-        local_user = parse_alert_context_from_message(test_message_local_user)
-        self.assertEqual(local_user["user"], "local")
-        self.assertEqual(local_user["origin_ident"], "1644629287")
-        self.assertEqual(local_user["created"], 1644629287.028714)
-        self.assertIsInstance(local_user["timing"], dict)
-        self.assertIsInstance(local_user['ident'], str)
-
-        klat_user = parse_alert_context_from_message(test_message_klat_data)
-        self.assertEqual(klat_user["user"], "server_user")
-        self.assertIsInstance(klat_user["ident"], str)
-        self.assertIsInstance(klat_user["created"], float)
-        self.assertIsInstance(klat_user["klat_data"], dict)
-
     def test_build_alert_from_intent_alarm(self):
-        from util.parse_utils import build_alert_from_intent
+        from skill_alerts.util.parse_utils import build_alert_from_intent
         seattle_tz = gettz("America/Los_Angeles")
         utc_tz = dt.timezone.utc
 
@@ -1950,7 +1785,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertGreaterEqual(alert.time_to_expiration,
                                     dt.timedelta(seconds=1))
@@ -1979,7 +1813,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertGreaterEqual(alert.time_to_expiration,
                                     dt.timedelta(seconds=1))
@@ -2010,7 +1843,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertAlmostEqual(alert.time_to_expiration.total_seconds(),
                                    dt.timedelta(hours=8).total_seconds(),
@@ -2024,7 +1856,7 @@ class TestParseUtils(unittest.TestCase):
                                .total_seconds(), delta=2)
 
     def test_build_alert_from_intent_timer(self):
-        from util.parse_utils import build_alert_from_intent
+        from skill_alerts.util.parse_utils import build_alert_from_intent
         sea_tz = gettz("America/Los_Angeles")
         no_name_10_minutes = _get_message_from_file("set_time_timer.json")
         baking_12_minutes = _get_message_from_file("start_named_timer.json")
@@ -2039,7 +1871,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(timer.context, dict)
             self.assertIsInstance(timer.alert_name, str)
             self.assertIsNone(timer.audio_file)
-            self.assertIsNone(timer.script_filename)
             self.assertFalse(timer.is_expired)
             self.assertIsInstance(timer.time_to_expiration, dt.timedelta)
             self.assertIsInstance(timer.next_expiration, dt.datetime)
@@ -2053,8 +1884,8 @@ class TestParseUtils(unittest.TestCase):
         _validate_alert_default_params(no_name_timer_utc)
         _validate_alert_default_params(no_name_timer_sea)
         self.assertAlmostEqual(
-            no_name_timer_sea.time_to_expiration.total_seconds(),
-            no_name_timer_utc.time_to_expiration.total_seconds(), 0)
+            no_name_timer_sea.time_to_expiration.total_seconds() * 10,
+            no_name_timer_utc.time_to_expiration.total_seconds() * 10, 0)
 
         baking_timer_sea = build_alert_from_intent(baking_12_minutes,
                                                    AlertType.TIMER,
@@ -2069,7 +1900,7 @@ class TestParseUtils(unittest.TestCase):
         self.assertEqual(bread_timer_sea.alert_name, "bread")
 
     def test_build_alert_from_intent_reminder(self):
-        from util.parse_utils import build_alert_from_intent
+        from skill_alerts.util.parse_utils import build_alert_from_intent
         sea_tz = gettz("America/Los_Angeles")
         now_local = dt.datetime.now(sea_tz).replace(microsecond=0)
 
@@ -2079,7 +1910,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(reminder.context, dict)
             self.assertIsInstance(reminder.alert_name, str)
             self.assertIsNone(reminder.audio_file)
-            self.assertIsNone(reminder.script_filename)
             self.assertFalse(reminder.is_expired)
             self.assertIsInstance(reminder.time_to_expiration, dt.timedelta)
             self.assertIsInstance(reminder.next_expiration, dt.datetime)
@@ -2190,7 +2020,7 @@ class TestUIModels(unittest.TestCase):
     lingua_franca.load_language('en')
 
     def test_build_timer_data(self):
-        from util.ui_models import build_timer_data
+        from skill_alerts.util.ui_models import build_timer_data
 
         now_time_valid = dt.datetime.now(dt.timezone.utc)
         invalid_alert = Alert.create(
@@ -2226,21 +2056,7 @@ class TestUIModels(unittest.TestCase):
         self.assertAlmostEqual(timer_data['percentRemaining'], 1, 1)
 
     def test_build_alarm_data(self):
-        from util.ui_models import build_alarm_data
-        us_context = {
-            "username": "test_user",
-            "user_profiles": [{
-                "user": {"username": "test_user"},
-                "units": {"time": 12}
-            }]
-        }
-        metric_context = {
-            "username": "test_user",
-            "user_profiles": [{
-                "user": {"username": "test_user"},
-                "units": {"time": 24}
-            }]
-        }
+        from skill_alerts.util.ui_models import build_alarm_data
 
         # Get tomorrow at 9 AM
         now_time_valid = dt.datetime.now(dt.timezone.utc)
@@ -2248,11 +2064,8 @@ class TestUIModels(unittest.TestCase):
                       dt.timedelta(hours=24)).replace(hour=9, minute=0,
                                                       second=0, microsecond=0)
 
-        us_alarm = Alert.create(alarm_time, "Test Alarm", AlertType.ALARM,
-                                context=us_context)
-        metric_alarm = Alert.create(alarm_time, "Test Alarm", AlertType.ALARM,
-                                    context=metric_context)
-
+        # TODO - account for mycroft.conf
+        us_alarm = Alert.create(alarm_time, "Test Alarm", AlertType.ALARM)
         us_display = build_alarm_data(us_alarm)
         self.assertEqual(set(us_display.keys()),
                          {'alarmTime', 'alarmAmPm', 'alarmName', 'alarmExpired',
@@ -2262,17 +2075,6 @@ class TestUIModels(unittest.TestCase):
         self.assertEqual(us_display['alarmName'], "Test Alarm")
         self.assertFalse(us_display['alarmExpired'])
         self.assertEqual(us_display['alarmIndex'], get_alert_id(us_alarm))
-
-        metric_display = build_alarm_data(metric_alarm)
-        self.assertEqual(set(metric_display.keys()),
-                         {'alarmTime', 'alarmAmPm', 'alarmName', 'alarmExpired',
-                          'alarmIndex'})
-        self.assertEqual(metric_display['alarmTime'], "09:00")
-        self.assertEqual(metric_display['alarmAmPm'], "")
-        self.assertEqual(metric_display['alarmName'], "Test Alarm")
-        self.assertFalse(metric_display['alarmExpired'])
-        self.assertEqual(metric_display['alarmIndex'],
-                         get_alert_id(metric_alarm))
 
 
 if __name__ == '__main__':

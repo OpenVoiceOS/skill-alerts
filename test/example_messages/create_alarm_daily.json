@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_alarm",
+  "type": "skill-alerts.openvoiceos:create_alarm",
   "data": {
     "utterances": [
       "create an alarm for 10 daily"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_alarm",
+    "intent_type": "skill-alerts.openvoiceos:create_alarm",
     "target": null,
     "confidence": 0.44999999999999996,
     "__tags__": [
@@ -81,14 +81,6 @@
       "skills"
     ],
     "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644629256.6125884,
-      "transcribed": 1644629256.6125884,
-      "save_transcript": 6.198883056640625e-06,
-      "text_parsers": 1.71661376953125e-05
-    },
-    "skill_id": "skill-alerts.neongeckocom"
+    "skill_id": "skill-alerts.openvoiceos"
   }
 }

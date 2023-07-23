@@ -27,31 +27,19 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime as dt
-
 from copy import deepcopy
 from typing import Optional, List
-from json_database import JsonStorage
 from uuid import uuid4 as uuid
-from mycroft_bus_client import Message
-from neon_utils.logger import LOG
-from neon_utils.location_utils import to_system_time
+
 from combo_lock import NamedLock
+from json_database import JsonStorage
+from ovos_bus_client import Message
 from ovos_utils.events import EventSchedulerInterface
+from ovos_utils.log import LOG
+from ovos_utils.time import to_system
 
 from . import AlertState, AlertType
 from .alert import Alert
-
-_DEFAULT_USER = "local"
-
-
-def get_alert_user(alert: Alert):
-    """
-    Get the user associated with the specified alert.
-    :param alert: Alert object to check
-    :returns: username associated with the alert or _DEFAULT_USER
-    """
-    return alert.context.get("username") or alert.context.get("user") \
-        or _DEFAULT_USER
 
 
 def get_alert_id(alert: Alert) -> Optional[str]:
@@ -60,7 +48,7 @@ def get_alert_id(alert: Alert) -> Optional[str]:
     :param alert: Alert object to check
     :returns: Alert identifier if specified, else None
     """
-    return alert.context.get("ident")
+    return alert.context.get("alert_id")
 
 
 def sort_alerts_list(alerts: List[Alert]) -> List[Alert]:
@@ -96,6 +84,7 @@ class AlertManager:
                  event_scheduler: EventSchedulerInterface,
                  alert_callback: callable):
         self._alerts_store = JsonStorage(alerts_file)
+        LOG.info(f"skill-alerts info stored under {alerts_file}")
         self._scheduler = event_scheduler
         self._callback = alert_callback
         self._pending_alerts = dict()
@@ -151,20 +140,6 @@ class AlertManager:
         if alert_id in self._pending_alerts:
             return AlertState.PENDING
         LOG.error(f"{alert_id} not found")
-
-    def get_user_alerts(self, user: str = _DEFAULT_USER) -> dict:
-        """
-        Get a sorted list of alerts for the requested user.
-        :param user: Username to retrieve alerts for
-        :returns: dict of disposition to sorted alerts for the specified user
-        """
-        user = user or _DEFAULT_USER
-        missed, active, pending = self._get_user_alerts(user)
-        return {
-            "missed": sort_alerts_list(missed),
-            "active": sort_alerts_list(active),
-            "pending": sort_alerts_list(pending)
-        }
 
     def get_all_alerts(self) -> dict:
         """
@@ -238,8 +213,8 @@ class AlertManager:
         alert_dict['end_repeat'] = None
         alert_dict['alert_name'] = alert.alert_name
 
-        if not alert_dict['context']['ident'].startswith('snoozed'):
-            alert_dict['context']['ident'] = f"snoozed_{get_alert_id(alert)}"
+        if not alert_dict['context']["alert_id"].startswith('snoozed'):
+            alert_dict['context']["alert_id"] = f"snoozed_{get_alert_id(alert)}"
 
         new_alert = Alert.from_dict(alert_dict)
         self.add_alert(new_alert)
@@ -266,7 +241,7 @@ class AlertManager:
         :returns: string identifier for the scheduled alert
         """
         # TODO: Consider checking ident is unique
-        ident = alert.context.get("ident") or str(uuid())
+        ident = alert.context.get("alert_id") or str(uuid())
         self._schedule_alert_expiration(alert, ident)
         self._dump_cache()
         return ident
@@ -336,14 +311,15 @@ class AlertManager:
         if not expire_time:
             raise ValueError(
                 f"Requested alert has no valid expiration: {ident}")
-        alrt.add_context({"ident": ident})  # Ensure ident is correct in alert
+        alrt.add_context({"alert_id": ident})  # Ensure ident is correct in alert
         with self._read_lock:
             self._pending_alerts[ident] = alrt
         data = alrt.data
         context = data.get("context")
         LOG.debug(f"Scheduling alert: {ident}")
+        # TODO - to_system looks wrong, should be to_local
         self._scheduler.schedule_event(self._handle_alert_expiration,
-                                       to_system_time(expire_time),
+                                       to_system(expire_time),
                                        data, ident, context=context)
 
     def _handle_alert_expiration(self, message: Message):
@@ -353,7 +329,7 @@ class AlertManager:
         :param message: Message associated with expired alert
         """
         alert = Alert.from_dict(message.data)
-        ident = message.context.get("ident")
+        ident = message.context.get("alert_id")
         try:
             with self._read_lock:
                 self._pending_alerts.pop(ident)
@@ -405,23 +381,6 @@ class AlertManager:
             except ValueError:
                 # Alert is expired with no valid repeat param
                 pass
-            if alert.alert_type == AlertType.TIMER and \
-                    get_alert_user(alert) == _DEFAULT_USER:
+            if alert.alert_type == AlertType.TIMER:
                 LOG.debug(f'Adding timer to GUI: {alert.alert_name}')
                 self._active_gui_timers.append(alert)
-
-    # Data Operations
-    def _get_user_alerts(self, user: str = _DEFAULT_USER) -> tuple:
-        """
-        Get all alerts for the specified user.
-        :param user: Username to get alerts for
-        :returns: unsorted lists of missed, active, pending alerts
-        """
-        with self._read_lock:
-            user_missed = [alert for alert in self._missed_alerts.values() if
-                           get_alert_user(alert) == user]
-            user_active = [alert for alert in self._active_alerts.values() if
-                           get_alert_user(alert) == user]
-            user_pending = [alert for alert in self._pending_alerts.values() if
-                            get_alert_user(alert) == user]
-        return user_missed, user_active, user_pending

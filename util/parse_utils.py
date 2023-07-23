@@ -27,20 +27,17 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import datetime as dt
 import os.path
-
-from time import time
-from uuid import uuid4 as uuid
 from typing import Optional, List, Union
-from lingua_franca import load_language
-from neon_utils.logger import LOG
-from mycroft_bus_client import Message, MessageBusClient
 
-from mycroft.util.format import TimeResolution, nice_duration, nice_time
-from mycroft.util.parse import extract_datetime, extract_duration, normalize
+from lingua_franca import load_language
+from lingua_franca.format import nice_time
+from lingua_franca.parse import extract_datetime, extract_duration, normalize
+from ovos_bus_client import Message
+from ovos_utils.log import LOG
 
 from . import AlertPriority, Weekdays, AlertType
 from .alert import Alert
-from .alert_manager import _DEFAULT_USER
+from .lf_extras import TimeResolution, nice_duration
 
 _SCRIPT_PRIORITY = AlertPriority.HIGHEST
 _default_lang = "en-US"
@@ -161,8 +158,6 @@ def build_alert_from_intent(message: Message, alert_type: AlertType,
     # Parse data in a specific order since tokens are mutated in parse methods
     priority = parse_alert_priority_from_message(message, tokens)
     end_condition = parse_end_condition_from_message(message, tokens, timezone)
-    audio_file = parse_audio_file_from_message(message, tokens)
-    script_file = parse_script_file_from_message(message, tokens)
     anchor_time = dt.datetime.now(timezone)
     alert_time = parse_alert_time_from_message(message, tokens, timezone, anchor_time)
 
@@ -170,7 +165,15 @@ def build_alert_from_intent(message: Message, alert_type: AlertType,
         if repeat_interval:
             alert_time = anchor_time + repeat_interval
         else:
-            return
+            LOG.info(f"Trying to parse time from alternate utterances")
+            for utt in message.data.get('utterances', []):
+                tokens = tokenize_utterance(message, utt)
+                alert_time = parse_alert_time_from_message(message, tokens,
+                                                           timezone, anchor_time)
+                if alert_time:
+                    break
+            else:
+                return
 
     lang = message.data.get("lang")
     try:
@@ -186,27 +189,28 @@ def build_alert_from_intent(message: Message, alert_type: AlertType,
     else:
         LOG.warning(f"No articles.voc found for lang={lang}")
         articles = list()
-    alert_context = parse_alert_context_from_message(message)
+    alert_context = message.context
     alert_context['start_time'] = anchor_time.isoformat()
     alert_name = parse_alert_name_from_message(message, tokens, True,
                                                articles) or \
-        get_default_alert_name(alert_time, alert_type, anchor_time, lang,
-                               use_24hour, get_spoken_alert_type)
+                 get_default_alert_name(alert_time, alert_type, anchor_time, lang,
+                                        use_24hour, get_spoken_alert_type)
 
     alert = Alert.create(alert_time, alert_name, alert_type, priority,
                          repeat_interval, repeat_days, end_condition,
-                         audio_file, script_file, alert_context)
+                         context=alert_context)
     return alert
 
 
-def tokenize_utterance(message: Message) -> List[str]:
+def tokenize_utterance(message: Message, utt: str = None) -> List[str]:
     """
     Get utterance tokens, split on matched vocab
     :param message: Message associated with intent match
+    :param utt: Utterance string to tokenize (default to intent match utterance)
     :returns: list of utterance tokens where a tag defines a token
     """
-    utterance = message.data["utterance"].lower()
-    tags = message.data["__tags__"]
+    utterance = message.data.get("utterance", utt or "").lower()
+    tags = message.data.get("__tags__", [])
     tags.sort(key=lambda tag: tag["start_token"])
     extracted_words = [tag.get("match") for tag in tags]
 
@@ -258,6 +262,7 @@ def parse_repeat_from_message(message: Message,
         tokens = tokens or tokenize_utterance(message)
         repeat_index = tokens.index(message.data["repeat"]) + 1
         repeat_clause = tokens.pop(repeat_index)
+        LOG.debug(f"repeat_clause={repeat_clause}")
         repeat_days = list()
         remainder = ""
         default_time = dt.time()
@@ -292,6 +297,7 @@ def parse_repeat_from_message(message: Message,
                 return duration
 
         if remainder:
+            LOG.debug(f"Repeat remainder={remainder}")
             new_tokens = remainder.split('\n')
             for token in new_tokens:
                 if token.strip():
@@ -373,54 +379,6 @@ def parse_alert_time_from_message(message: Message,
     return alert_time
 
 
-def parse_audio_file_from_message(message: Message,
-                                  tokens: Optional[list] = None) -> \
-        Optional[str]:
-    """
-    Parses a requested audiofile from the utterance. If tokens are provided,
-    handled tokens are removed.
-    :param message: Message associated with intent match
-    :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :returns: extracted audio file path, else None
-    """
-    if message.data.get("playable"):
-        # TODO: Parse an audio filename here and remove matched token
-        pass
-    return None
-
-
-def parse_script_file_from_message(message: Message,
-                                   tokens: Optional[list] = None,
-                                   bus: MessageBusClient = None) -> \
-        Optional[str]:
-    """
-    Parses a requested script file from the utterance. If tokens are provided,
-    handled tokens are removed.
-    :param message: Message associated with intent match
-    :param bus: Connected MessageBusClient to query available scripts
-    :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :returns: validated script filename, else None
-    """
-    bus = bus or MessageBusClient()
-    if not bus.started_running:
-        bus.run_in_thread()
-    if message.data.get("script"):
-        # TODO: Validate/test this DM
-        # check if CC can access the required script and get its valid name
-        resp = bus.wait_for_response(Message("neon.script_exists",
-                                             data=message.data,
-                                             context=message.context))
-        is_valid = resp.data.get("script_exists", False)
-        consumed = resp.data.get("consumed_utt", "")
-        if tokens and consumed:
-            for token in tokens:
-                if consumed in token:
-                    # TODO: Split on consumed words and insert unmatched tokens
-                    pass
-        return resp.data.get("script_name", None) if is_valid else None
-    return None
-
-
 def parse_alert_priority_from_message(message: Message,
                                       tokens: Optional[list] = None) -> \
         AlertPriority:
@@ -431,10 +389,7 @@ def parse_alert_priority_from_message(message: Message,
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
     """
     # TODO: Parse requested priority from utterance
-    if message.data.get("script"):
-        priority = _SCRIPT_PRIORITY
-    else:
-        priority = AlertPriority.AVERAGE
+    priority = AlertPriority.AVERAGE
     return priority
 
 
@@ -451,6 +406,7 @@ def parse_alert_name_from_message(message: Message,
     :param articles: list of words to strip from a candidate alert name
     :returns: Best guess at a name extracted from tokens
     """
+
     def _strip_datetime_from_token(t):
         try:
             _, t = extract_duration(t, lang)
@@ -463,7 +419,7 @@ def parse_alert_name_from_message(message: Message,
         return t
 
     specified_tokens = tokens
-    lang = message.data.get("lang") or "en-us"
+    lang = message.data.get("lang") or message.context.get("lang") or _default_lang
     articles = articles or list()
 
     load_language(lang)
@@ -492,19 +448,3 @@ def parse_alert_name_from_message(message: Message,
         return None
     LOG.info(f"Parsed possible names: {candidate_names}")
     return candidate_names[0]
-
-
-def parse_alert_context_from_message(message: Message) -> dict:
-    """
-    Parse the request message context and ensure required parameters exist
-    :param message: Message associated with the request
-    :returns: dict context to include in Alert object
-    """
-    required_context = {
-        "user": message.context.get("user") or _DEFAULT_USER,
-        "ident": str(uuid()),
-        "origin_ident": message.context.get('ident'),
-        "created": message.context.get("timing",
-                                       {}).get("handle_utterance") or time()
-    }
-    return {**message.context, **required_context}

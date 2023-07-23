@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:create_alarm",
+  "type": "skill-alerts.openvoiceos:create_alarm",
   "data": {
     "utterances": [
       "neon create an alarm"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:create_alarm",
+    "intent_type": "skill-alerts.openvoiceos:create_alarm",
     "skill_alerts_neongeckocomalarm": "alarm",
     "skill_alerts_neongeckocomset": "create",
     "target": null,
@@ -59,14 +59,6 @@
     "source": [
       "skills"
     ],
-    "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644981069.179295,
-      "transcribed": 1644981069.179295,
-      "save_transcript": 3.5762786865234375e-06,
-      "text_parsers": 1.2636184692382812e-05
-    }
+    "destination": "debug_cli"
   }
 }

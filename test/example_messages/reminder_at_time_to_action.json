@@ -1,11 +1,11 @@
 {
-  "type": "skill-alerts.neongeckocom:alternate_reminder",
+  "type": "skill-alerts.openvoiceos:alternate_reminder",
   "data": {
     "utterances": [
       "remind me at 7 pm to start making dinner"
     ],
     "lang": "en-us",
-    "intent_type": "skill-alerts.neongeckocom:alternate_reminder",
+    "intent_type": "skill-alerts.openvoiceos:alternate_reminder",
     "remind_me": "remind me",
     "target": null,
     "confidence": 0.13333333333333333,
@@ -38,14 +38,6 @@
     "source": [
       "skills"
     ],
-    "destination": "debug_cli",
-    "client": "local",
-    "neon_should_respond": false,
-    "timing": {
-      "handle_utterance": 1644970939.6371384,
-      "transcribed": 1644970939.6371384,
-      "save_transcript": 6.67572021484375e-06,
-      "text_parsers": 1.9550323486328125e-05
-    }
+    "destination": "debug_cli"
   }
 }

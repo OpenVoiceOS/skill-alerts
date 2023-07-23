@@ -6,12 +6,10 @@ languages:
 
 # vocab is lowercase .voc file basenames
 vocab:
-  - 'script'
   - 'next'
   - 'playable'
   - 'weekends'
   - 'until'
-  - 'quiet_hours_end'
   - 'everyday'
   - 'repeat'
   - 'event'
@@ -21,7 +19,6 @@ vocab:
   - 'alarm'
   - 'timer'
   - 'priority'
-  - 'quiet_hours_start'
   - 'timer_time_remaining'
   - 'cancel'
   - 'snooze'
@@ -43,17 +40,14 @@ dialog:
   - 'list_alert_none_missed'
   - 'word_weekday'
   - 'word_weekend'
-  - 'confirm_alert_recurring_script'
   - 'word_weekday_friday'
   - 'list_alert_repeating'
   - 'word_alert'
   - 'word_alarm'
   - 'confirm_alert_recurring'
-  - 'quiet_hours_end'
   - 'expired_reminder'
   - 'word_weekday_monday'
   - 'next_alert_named'
-  - 'confirm_alert_script'
   - 'list_alert_none_upcoming'
   - 'word_weekday_wednesday'
   - 'expired_alert'
@@ -73,7 +67,6 @@ dialog:
   - 'word_day'
   - 'error_no_time'
   - 'word_timer'
-  - 'quiet_hours_start'
   - 'timer_status'
   - 'list_alert'
   - 'timer_status_none_active'
@@ -83,8 +76,9 @@ dialog:
 regex: []
 intents:
   # Padatious intents are the `.intent` file names
-  padatious: []
-  # Adapt intents are the name passed to the constructor
+  padatious:
+    - list_alerts.intent
+
   adapt:
     - 'CreateAlarm'
     - 'CreateTimer'
@@ -92,8 +86,6 @@ intents:
     - 'CreateReminderAlt'
     - 'CreateEvent'
     - 'NextAlert'
-    - 'ListAlerts'
+    - 'ListAllAlerts'
     - 'TimerStatus'
-    - 'StartQuietHours'
-    - 'EndQuietHours'
     - 'CancelAlert'
