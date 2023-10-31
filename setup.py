@@ -32,7 +32,33 @@ from os import getenv, path, walk
 SKILL_NAME = "skill-alerts"
 SKILL_PKG = SKILL_NAME.replace('-', '_')
 # skill_id=package_name:SkillClass
-PLUGIN_ENTRY_POINT = f'{SKILL_NAME}.neongeckocom={SKILL_PKG}:AlertSkill'
+PLUGIN_ENTRY_POINT = f'{SKILL_NAME}.openvoiceos={SKILL_PKG}:AlertSkill'
+BASE_PATH = path.abspath(path.dirname(__file__))
+
+
+def get_version():
+    """ Find the version of the package"""
+    version = None
+    version_file = path.join(BASE_PATH, 'version.py')
+    major, minor, build, alpha = (None, None, None, None)
+    with open(version_file) as f:
+        for line in f:
+            if 'VERSION_MAJOR' in line:
+                major = line.split('=')[1].strip()
+            elif 'VERSION_MINOR' in line:
+                minor = line.split('=')[1].strip()
+            elif 'VERSION_BUILD' in line:
+                build = line.split('=')[1].strip()
+            elif 'VERSION_ALPHA' in line:
+                alpha = line.split('=')[1].strip()
+
+            if ((major and minor and build and alpha) or
+                    '# END_VERSION_BLOCK' in line):
+                break
+    version = f"{major}.{minor}.{build}"
+    if alpha and int(alpha) > 0:
+        version += f"a{alpha}"
+    return version
 
 
 def get_requirements(requirements_filename: str):
@@ -59,46 +85,34 @@ def get_requirements(requirements_filename: str):
 
 def find_resource_files():
     resource_base_dirs = ("locale", "ui", "vocab", "dialog", "regex", "res")
-    base_dir = path.dirname(__file__)
     package_data = ["skill.json"]
     for res in resource_base_dirs:
-        if path.isdir(path.join(base_dir, res)):
-            for (directory, _, files) in walk(path.join(base_dir, res)):
+        if path.isdir(path.join(BASE_PATH, res)):
+            for (directory, _, files) in walk(path.join(BASE_PATH, res)):
                 if files:
                     package_data.append(
-                        path.join(directory.replace(base_dir, "").lstrip('/'),
+                        path.join(directory.replace(BASE_PATH, "").lstrip('/'),
                                   '*'))
-#    print(package_data)
     return package_data
 
 
 with open("README.md", "r") as f:
     long_description = f.read()
 
-with open("./version.py", "r", encoding="utf-8") as v:
-    for line in v.readlines():
-        if line.startswith("__version__"):
-            if '"' in line:
-                version = line.split('"')[1]
-            else:
-                version = line.split("'")[1]
 
 setup(
-    name=f"neon-{SKILL_NAME}",
-    version=version,
-    url=f'https://github.com/NeonGeckoCom/{SKILL_NAME}',
+    name=f"ovos-{SKILL_NAME}",
+    version=get_version(),
+    url=f'https://github.com/OpenVoiceOS/{SKILL_NAME}',
     license='BSD-3-Clause',
     install_requires=get_requirements("requirements.txt"),
-    author='Neongecko',
-    author_email='developers@neon.ai',
+    author='Emphasize',
+    author_email='25036977+emphasize@users.noreply.github.com',
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_dir={SKILL_PKG: ""},
     packages=[SKILL_PKG, f"{SKILL_PKG}.util"],
     package_data={SKILL_PKG: find_resource_files()},
     include_package_data=True,
-    extras_require={
-        'neon': ["neon-utils~=1.2"]
-    },
     entry_points={"ovos.plugin.skill": PLUGIN_ENTRY_POINT}
 )

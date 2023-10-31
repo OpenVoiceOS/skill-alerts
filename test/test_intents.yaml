@@ -24,24 +24,28 @@
 en-us:
   CreateAlarm:
     - set an alarm:
-        - set
-        - alarm
+      - create
+      - alarm
     - create a playback alarm every weekday with my test script until next tuesday:
-        - playable
-        - weekdays
-        - script
-        - until
-        - repeat
+      - playable
+      - weekdays
+      - script
+      - until
+      - repeat
     - alarm in an hour:
-        - alarm
+      - alarm
     - alarm daily for the next week at 9 AM:
-        - alarm
-        - everyday
-        - until
+      - alarm
+      - everyday
+      - until
     - make a 10 am weekend alarm:
-        - alarm
-        - set
-        - weekends
+      - alarm
+      - create
+      - weekends
+  CreateOcpAlarm:
+    - wake me up with music:
+      - alarm
+      - media
   CreateTimer:
     - set a timer
     - start a timer
@@ -49,72 +53,160 @@ en-us:
     - make a 5 hour timer
   CreateReminder:
     - set a playback reminder to take out the trash daily at 5 pm until november:
-      - set
+      - create
       - playable
       - reminder
       - everyday
       - until
     - set a script reminder for weekends at 5 till next week:
-        - set
-        - script
-        - reminder
-        - weekends
-        - until
+      - create
+      - script
+      - reminder
+      - weekends
+      - until
     - create a reminder to go to work at 9 am daily for the next month:
-        - set
-        - reminder
-        - everyday
-        - until
+      - create
+      - reminder
+      - everyday
+      - until
   CreateReminderAlt:
     - remind me to go to work weekday mornings at 8:
-        - remind_me
-        - weekdays
+      - remind
+      - weekdays
     - remind me every day to check for test failures until 2024:
-        - remind_me
-        - everyday
-        - until
+      - remind
+      - everyday
+      - until
   CreateEvent:
     - I have a work event next tuesday at 7 PM:
-        - event
+      - event
     - I have an appointment at 9 PM every weekend night until next year:
-        - event
-        - weekends
-        - until
+      - event
+      - weekends
+      - until
     - create a daily event to join zoom at 1 PM for the next year:
-        - event
-        - everyday
-        - until
-  NextAlert:
+      - event
+      - everyday
+      - until
+  RescheduleAlert:
+    - move the baseball event to 08:00 pm:
+      - change
+      - event
+    - reschedule the next event two hours earlier:
+      - change
+      - next
+      - event
+      - earlier
+  RescheduleAlertAlt:
+    - extend the pizza timer by 2 minutes:
+      - later
+      - timer
+    - decrease the bread timer by 5 minutes:
+      - earlier
+      - timer
+  ChangeProperties:
+    - reschedule the wake alarm to every Monday and Tuesday:
+      - change
+      - alarm
+      - repeat
+    - change the pill reminder frequency to 4 hours:
+      - change
+      - reminder
+      - repeat
+    - change the baseball event priority to 10:
+      - change
+      - event
+      - priority
+  ListAlerts:
+    - tell me my pending alarms
+    - what are my upcoming reminders
+    - show me all of my events
+    - got any reminder next week
+    - are there any alerts between 4 pm and 5 pm
+    - do i have my alarms set tomorrow
     - tell me my next alert
     - when is my next alarm
     - what time is my next reminder
     - what is my next timer
     - what is my next event
-  ListAlerts:
-    - tell me my pending alarms
-    - what are my upcoming reminders
-    - list all of my timers
-    - show me all of my events
   TimerStatus:
     - how much time is left
     - how long on that timer
     - what is the timer status
-  StartQuietHours:
-    - start quiet hours
-    - do not disturb me for the next hour
-  EndQuietHours:
-    - end quiet hours
-    - what did I miss?
+  missed_alerts.intent:
+    - did i miss any alarms
+    - missed any reminder
+    - have i missed any timers
+    - miss any events
   CancelAlert:
     - cancel my next alarm:
-        - alarm
+      - alarm
+      - next
     - cancel all reminders:
-        - reminder
-        - all
+      - reminder
+      - stored
     - clear all timers:
-        - timer
-        - all
+      - timer
+      - stored
     - delete my next event:
-        - event
+      - event
+      - next
     - remove my next alert:
-        - alert
+      - alert
+      - next
+  CalendarList:
+    - which calendars are available:
+      - query
+      - calendar
+      - choice
+  CreateList:
+    - create a shopping list:
+      - create
+      - list
+  AddListSubitems:
+    - add things to the shopping list:
+      - create
+      - items
+      - list
+  QueryListEntries:
+    - what items are on my shopping list:
+      - query
+      - items
+      - list
+  DeleteListEntries:
+    - drop items from the shopping list:
+      - delete
+      - items
+      - list
+  QueryListNames:
+    - which lists are stored:
+      - query
+      - list
+      - stored
+  QueryTodoEntries:
+    - anything todo?
+      - query
+      - todo
+    - is there something todo?
+  DeleteTodoEntries:
+    - remove walk the dog note:
+      - delete
+      - todo
+    - remove todo entries:
+      - delete
+      - todo
+      - items
+    - remove all memos:
+      - delete
+      - todo
+      - stored
+  DeleteList:
+    - drop the shopping list:
+      - delete
+      - list
+    - delete list:
+      - delete
+      - list
+
+  
+  

@@ -1,0 +1,16 @@
+# note: time gets parsed from the utterance, "wecke mich in 10 minuten"/"wecke mich um 10 uhr" -> wecke mich (um|in)
+snooze
+schlummer
+schlummern
+noch ein bischen
+ein bischen noch
+dösen
+stell auf (schlummern|dösen)
+(weck mich|) später
+(lass|lasst) mich (noch|) (schlafen|dösen|schlummern)
+(weck|wecke|weg) mich (um|in)
+(meld|melde|meldet) dich (um|in) (noch einmal|)
+(meld|melde|meldet) dich (noch einmal|) (um|in)
+(erinner|erinnere|erinnert) mich (um|in)
+(verlänger|verlängere|verlängert|verlängern|verlängerung) (um|bis|)
+(um|bis) (verlänger|verlängere|verlängert|verlängern|verlängerung)

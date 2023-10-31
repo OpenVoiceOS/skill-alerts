@@ -1,0 +1,93 @@
+{
+    "type": "skill-alerts.neongeckocom:ReschedulerAlert",
+    "data": {
+      "utterances": [
+        "reschedule my baseball training event 15 minutes earlier"
+      ],
+      "lang": "en-us",
+      "intent_type": "skill-alerts.neongeckocom:ReschedulerAlert",
+      "change": "reschedule",
+      "event": "event",
+      "target": null,
+      "confidence": 0.275,
+      "__tags__": [
+        {
+          "match": "reschedule",
+          "key": "reschedule",
+          "start_token": 0,
+          "entities": [
+            {
+              "key": "reschedule",
+              "match": "reschedule",
+              "data": [
+                [
+                  "reschedule",
+                  "skill_alerts_neongeckocomchange"
+                ]
+              ],
+              "confidence": 1.0
+            }
+          ],
+          "end_token": 0,
+          "from_context": false
+        },
+        {
+            "match": "event",
+            "key": "event",
+            "start_token": 4,
+            "entities": [
+              {
+                "key": "event",
+                "match": "event",
+                "data": [
+                  [
+                    "event",
+                    "skill_alerts_neongeckocomevent"
+                  ]
+                ],
+                "confidence": 1.0
+              }
+            ],
+            "end_token": 4,
+            "from_context": false
+          },
+          {
+              "match": "earlier",
+              "key": "earlier",
+              "start_token": 7,
+              "entities": [
+                {
+                  "key": "earlier",
+                  "match": "earlier",
+                  "data": [
+                    [
+                      "earlier",
+                      "skill_alerts_neongeckocomearlier"
+                    ]
+                  ],
+                  "confidence": 1.0
+                }
+              ],
+              "end_token": 7,
+              "from_context": false
+            }
+      ],
+      "utterance": "reschedule my baseball training event 15 minutes earlier"
+    },
+    "context": {
+      "username": "test_reschedule",
+      "client_name": "mycroft_cli",
+      "source": [
+        "skills"
+      ],
+      "destination": "debug_cli",
+      "client": "local",
+      "neon_should_respond": false,
+      "timing": {
+        "handle_utterance": 1644982822.0187464,
+        "transcribed": 1644982822.0187464,
+        "save_transcript": 4.291534423828125e-06,
+        "text_parsers": 1.2874603271484375e-05
+      }
+    }
+  }

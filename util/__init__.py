@@ -26,13 +26,15 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from enum import IntEnum
+from enum import IntEnum, Enum
 
+LOCAL_USER = "local"
 
 class AlertState(IntEnum):
-    PENDING = 0
+    REMOVED = 0
     MISSED = 1
-    ACTIVE = 2
+    PENDING = 2
+    ACTIVE = 3
 
 
 class AlertType(IntEnum):
@@ -40,7 +42,14 @@ class AlertType(IntEnum):
     ALARM = 0
     TIMER = 1
     REMINDER = 2
+    EVENT = 3
+    TODO = 4
     UNKNOWN = 99
+
+
+class DAVType(IntEnum):
+    VEVENT = 1
+    VTODO = 2
 
 
 class AlertPriority(IntEnum):
@@ -49,10 +58,12 @@ class AlertPriority(IntEnum):
     LOWEST = 1
 
 
+# This is comparing against fuzzy_match (0-100)
 class MatchLevel(IntEnum):
-    NAME_EXACT = 10
-    TIME_EXACT = 8
-    NAME_PARTIAL = 6
+    ALL_EXACT = 120
+    DT_EXACT = 111
+    NAME_EXACT = 110
+    TIME_EXACT = 100
 
 
 class Weekdays(IntEnum):

@@ -2,7 +2,7 @@
   "type": "skill-alerts.neongeckocom:create_alarm",
   "data": {
     "utterances": [
-      "set an alarm for 8 am on weekdays"
+      "set an alarm for 8 AM on weekdays"
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:create_alarm",
@@ -74,7 +74,7 @@
         "from_context": false
       }
     ],
-    "utterance": "set an alarm for 8 am on weekdays",
+    "utterance": "set an alarm for 8 AM on weekdays",
     "alarm": "alarm",
     "set": "set",
     "weekdays": "weekdays"

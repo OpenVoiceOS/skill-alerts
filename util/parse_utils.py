@@ -25,48 +25,124 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import datetime as dt
-import os.path
-
+import re
 from time import time
-from uuid import uuid4 as uuid
-from typing import Optional, List, Union
-from lingua_franca import load_language
-from neon_utils.logger import LOG
-from mycroft_bus_client import Message, MessageBusClient
+from uuid import uuid4
+from typing import Optional, List, Union, Tuple, Any
 
-from mycroft.util.format import TimeResolution, nice_duration, nice_time
-from mycroft.util.parse import extract_datetime, extract_duration, normalize
+from dateutil.relativedelta import relativedelta
+from ovos_utils.log import LOG
+from ovos_bus_client import Message, MessageBusClient
+from lingua_franca.format import nice_time, nice_day
+from lingua_franca.parse import extract_datetime, extract_duration, normalize, extract_number
+from ovos_config.locale import get_default_lang, load_language, get_default_tz
+from rapidfuzz import fuzz
 
-from . import AlertPriority, Weekdays, AlertType
-from .alert import Alert
-from .alert_manager import _DEFAULT_USER
+from skill_alerts.util import AlertPriority, Weekdays, AlertType, DAVType, LOCAL_USER
+from skill_alerts.util.alert import Alert
+from skill_alerts.util.config import use_24h_format, find_resource_file, get_date_format
+from skill_alerts.util.locale import (
+    voc_match,
+    spoken_alert_type,
+    get_words_list,
+    spoken_duration,
+    get_alert_type
+)
 
 _SCRIPT_PRIORITY = AlertPriority.HIGHEST
-_default_lang = "en-US"
 
 
-def _default_find_resource(res_name, _=None, lang=None):
-    # TODO: Refactor on skill resources object as a singleton
-    LOG.warning("find_resource method not defined, using fallback")
-    base_dir = os.path.dirname(os.path.dirname(__file__))
-    lang = lang or "en-us"
-    file = os.path.join(base_dir, "locale", lang, res_name)
-    if os.path.isfile(file):
-        return file
-    return None
+class Tokens(list):
+    def __init__(self, chunks: list, message: Message = None):
+        super().__init__(chunks)
+        self.original: list = self[:]
+        self.original_str: str = " ".join(self.original)
+        self.message = message
+        self.time_stripped = False
+        self.extracted_time: Union[dt.datetime, dt.timedelta] = None
+
+    @property
+    def lang(self):
+        return self.message.data.get("lang") or get_default_lang()
+
+    def unmatched(self, original = False):
+        if original:
+            list_ = self.original
+        else:
+            list_ = self
+        return [chunk for chunk in list_ if
+                not (self.is_matched(chunk) or
+                chunk in get_words_list("noise_words.voc", self.lang))]
+
+    def is_matched(self, chunk):
+        return any([tag["match"] == chunk
+                    for tag in self.message.data["__tags__"]])
+
+    def strip_time(self):
+        if self.time_stripped:
+            return
+        
+        time_data = []
+        lang = self.message.data.get("lang")
+        for i, token in enumerate(self):
+            if self.is_matched(token):
+                continue
+            time_ = None
+            try:
+                time_, remainder = extract_duration(token, lang=lang)
+            except TypeError:
+                pass
+            if time_ is None:
+                try:
+                    extracted_content = extract_datetime(token, lang=lang)
+                    if not extracted_content:
+                        continue
+                    time_, remainder = extracted_content
+                except TypeError:
+                    pass
+            if time_:
+                time_data.append(time_)
+            self[i] = remainder
+        
+        self.extracted_time = time_data[0] if time_data else None
+    
+    def clear(self):
+        self[:] = self.original
+        self.time_stripped = False
+
+        return self
 
 
-def _default_spoken(alert_type: AlertType):
-    LOG.warning("get_spoken_alert_type method not defined, using fallback")
-    if alert_type == AlertType.ALARM:
-        return "alarm"
-    if alert_type == AlertType.TIMER:
-        return "timer"
-    if alert_type == AlertType.REMINDER:
-        return "reminder"
-    return "alert"
+def tokenize_utterance(message: Message) -> Tokens[list]:
+    """
+    Get utterance tokens, split on matched vocab
+    :param message: Message associated with intent match
+    :returns: list of utterance tokens where a tag defines a token
+    """
+    utterance: str = message.data.get("utterance", "").lower()
+    lang = message.data.get("lang") or get_default_lang()
+    if utterance is None:
+        return Tokens([], message)
 
+    tags = message.data.get("__tags__")
+    if tags is None:
+        message.data["__tags__"] = []
+        chunks = [utterance]
+    else:
+        tags.sort(key=lambda tag: tag["start_token"])
+        extracted_words = [tag.get("match") for tag in tags]
+        chunks = list()
+        for word in extracted_words:
+            parsed, utterance = utterance.split(word, 1)
+            # strip possible connectors left behind due to split
+            parsed = parsed.strip("-")
+            chunks.extend((parsed, word))
+        chunks.append(utterance)
+    tokens = Tokens([normalize(chunk, lang=lang, remove_articles=False).lower()
+                     for chunk in chunks if chunk.strip()], message)
+    return tokens
 
 def round_nearest_minute(alert_time: dt.datetime,
                          cutoff: dt.timedelta = dt.timedelta(minutes=10)) -> \
@@ -77,79 +153,85 @@ def round_nearest_minute(alert_time: dt.datetime,
     :param cutoff: minimum delta to consider rounding the alert time
     :returns: datetime rounded to the nearest minute if delta exceeds cutoff
     """
-    if alert_time <= dt.datetime.now(dt.timezone.utc) + cutoff:
+    if alert_time <= dt.datetime.now(alert_time.tzinfo) + cutoff:
         return alert_time
     else:
         new_alert_time = alert_time.replace(second=0).replace(microsecond=0)
     return new_alert_time
 
 
-def spoken_time_remaining(alert_time: dt.datetime,
-                          now_time: Optional[dt.datetime] = None,
-                          lang=_default_lang) -> str:
-    """
-    Gets a speakable string representing time until alert_time
-    :param alert_time: Datetime to get duration until
-    :param now_time: Datetime to count duration from
-    :param lang: Language to format response in
-    :return: speakable duration string
-    """
-    load_language(lang or _default_lang)
-    now_time = now_time or dt.datetime.now(dt.timezone.utc)
-    remaining_time: dt.timedelta = alert_time - now_time
-
-    if remaining_time > dt.timedelta(weeks=1):
-        resolution = TimeResolution.DAYS
-    elif remaining_time > dt.timedelta(days=1):
-        resolution = TimeResolution.HOURS
-    elif remaining_time > dt.timedelta(hours=1):
-        resolution = TimeResolution.MINUTES
-    else:
-        resolution = TimeResolution.SECONDS
-    return nice_duration(remaining_time.total_seconds(),
-                         resolution=resolution, lang=lang)
-
-
-def get_default_alert_name(alert_time: dt.datetime, alert_type: AlertType,
+def get_default_alert_name(alert_time: Union[dt.date, dt.datetime, dt.timedelta],
+                           alert_type: AlertType,
+                           timezone: dt.tzinfo = None,
                            now_time: Optional[dt.datetime] = None,
-                           lang: str = None, use_24hour: bool = False,
-                           spoken_alert_type: callable = _default_spoken) -> \
-        str:
+                           lang: str = None) -> \
+        Optional[str]:
     """
     Build a default name for the specified alert
     :param alert_time: datetime of next alert expiration
     :param alert_type: AlertType of alert to name
     :param now_time: datetime to anchor timers for duration
     :param lang: Language to format response in
-    :param use_24hour: If true, use 24 hour timescale
-    :param spoken_alert_type: method to translate AlertType to speakable string
     :return: name for alert
     """
-    lang = lang or _default_lang
+    if alert_time is None:
+        return spoken_alert_type(alert_type, lang)
+
+    timezone = timezone or alert_time.tzinfo if \
+            isinstance(alert_time, dt.datetime) else get_default_tz()
+    now_time = now_time or dt.datetime.now(tz=timezone)
+    lang = lang or get_default_lang()
+    load_language(lang)
     if alert_type == AlertType.TIMER:
-        time_str = spoken_time_remaining(alert_time, now_time, lang)
+        time_str = spoken_duration(alert_time, now_time, lang)
+    # TODO ordinalize (LF)
+    elif alert_time.__class__ == dt.date:
+        time_str = nice_day(alert_time, get_date_format(), lang=lang)
     else:
-        load_language(lang)
-        time_str = nice_time(alert_time, lang, False, use_24hour, True)
-    return f"{time_str} {spoken_alert_type(alert_type)}"
+        use_24hr = use_24h_format()
+        if isinstance(alert_time, dt.timedelta):
+            alert_time += now_time
+        time_str = nice_time(alert_time, lang, False, use_24hr, not use_24hr)
+    return f"{time_str} {spoken_alert_type(alert_type, lang)}"
 
 
-def build_alert_from_intent(message: Message, alert_type: AlertType,
-                            timezone: dt.tzinfo, use_24hour: bool = False,
-                            get_spoken_alert_type: callable = _default_spoken,
-                            find_resource: callable = _default_find_resource) \
-        -> Optional[Alert]:
+def has_default_name(alert: Alert, lang: str = None) -> bool:
+    """
+    Check if the alert name is a default name (ie not specifically named)
+    :param alert_name: name of alert to check
+    :param lang: language to format response in
+    :return: True if alert_name is the default name for the alert
+    """
+    lang = lang or get_default_lang()
+    expiration = alert.expiration.date() if alert.is_all_day else alert.expiration
+    default_name = get_default_alert_name(expiration,
+                                          alert.alert_type,
+                                          alert.timezone,
+                                          alert.created,
+                                          lang)
+    return alert.alert_name == default_name
+
+
+def build_alert_from_intent(message: Message) -> Optional[Alert]:
     """
     Parse alert parameters from a matched intent into an Alert object
     :param message: Message associated with request
-    :param alert_type: AlertType requested
     :param timezone: Timezone for user associated with request
-    :param use_24hour: Use 24 hour time format if True, else 12 hour
-    :param get_spoken_alert_type: optional method to get translated alert types
-    :param find_resource: skill.find_resource method to resolve resource files
     :returns: Alert extracted from utterance or None if missing required params
     """
+    lang = message.data.get("lang") or get_default_lang()
+    LOG.debug(f"{lang}, {type(lang)}")
+
+    data = dict()
+    data["context"] = parse_alert_context_from_message(message)
+
+    timezone = get_default_tz()
+    timestamp = data.get("context").get("created")
+    anchor_time = dt.datetime.fromtimestamp(timestamp).astimezone(timezone)
+
     tokens = tokenize_utterance(message)
+    alert_type = get_alert_type(message)
+
     repeat = parse_repeat_from_message(message, tokens)
     if isinstance(repeat, dt.timedelta):
         repeat_interval = repeat
@@ -159,80 +241,45 @@ def build_alert_from_intent(message: Message, alert_type: AlertType,
         repeat_interval = None
 
     # Parse data in a specific order since tokens are mutated in parse methods
-    priority = parse_alert_priority_from_message(message, tokens)
-    end_condition = parse_end_condition_from_message(message, tokens, timezone)
-    audio_file = parse_audio_file_from_message(message, tokens)
-    script_file = parse_script_file_from_message(message, tokens)
-    anchor_time = dt.datetime.now(timezone)
+    data["priority"] = parse_alert_priority_from_message(message, tokens)
     alert_time = parse_alert_time_from_message(message, tokens, timezone, anchor_time)
+    until = parse_end_condition_from_message(message, tokens, timezone, alert_time or anchor_time)
+    data["audio_file"] = parse_audio_file_from_message(message, tokens)
+    data["script_file"] = parse_script_file_from_message(message, tokens)
+    #alert_time = parse_alert_time_from_message(message, tokens, timezone, anchor_time)
 
-    if not alert_time:
+    if isinstance(until, (dt.timedelta, relativedelta,)): 
+        until = (alert_time or anchor_time) + until
+
+    if alert_type == AlertType.TIMER and alert_time is None:
+        # stopwatch timer
+        alert_time = anchor_time
+        data["context"]["stopwatch_mode"] = True
+    elif alert_time is None:
         if repeat_interval:
             alert_time = anchor_time + repeat_interval
-        else:
-            return
+        elif until:
+            alert_time = until
 
-    lang = message.data.get("lang")
-    try:
-        article_file = find_resource("articles.voc", lang=lang)
-    except TypeError:
-        LOG.error("Incompatible `find_resource` method passed")
-        article_file = None
-    article_file = article_file or _default_find_resource("vocab/articles.voc",
-                                                          lang=lang)
-    if article_file:
-        with open(article_file) as f:
-            articles = f.read().split('\n')
-    else:
-        LOG.warning(f"No articles.voc found for lang={lang}")
-        articles = list()
-    alert_context = parse_alert_context_from_message(message)
-    alert_context['start_time'] = anchor_time.isoformat()
-    alert_name = parse_alert_name_from_message(message, tokens, True,
-                                               articles) or \
-        get_default_alert_name(alert_time, alert_type, anchor_time, lang,
-                               use_24hour, get_spoken_alert_type)
+    if message.data.get("all_day") and alert_time is not None:
+        alert_time = alert_time.date()
 
-    alert = Alert.create(alert_time, alert_name, alert_type, priority,
-                         repeat_interval, repeat_days, end_condition,
-                         audio_file, script_file, alert_context)
-    return alert
+    data["expiration"] = alert_time
+    data["until"] = until
+    data["repeat_frequency"] = repeat_interval
+    data["repeat_days"] = repeat_days
 
+    data["alert_name"] = parse_alert_name_from_message(message, tokens) \
+            or get_default_alert_name(alert_time,
+                                      get_alert_type(message),
+                                      timezone,
+                                      now_time=anchor_time,
+                                      lang=lang)
+    data["alert_type"] = alert_type
+    if alert_type == AlertType.TODO:
+        data["dav_type"] = DAVType.VTODO
 
-def tokenize_utterance(message: Message) -> List[str]:
-    """
-    Get utterance tokens, split on matched vocab
-    :param message: Message associated with intent match
-    :returns: list of utterance tokens where a tag defines a token
-    """
-    utterance = message.data["utterance"].lower()
-    tags = message.data["__tags__"]
-    tags.sort(key=lambda tag: tag["start_token"])
-    extracted_words = [tag.get("match") for tag in tags]
-
-    chunks = list()
-    for word in extracted_words:
-        parsed, utterance = utterance.split(word, 1)
-        chunks.extend((parsed, word))
-    chunks.append(utterance)
-    chunks = [chunk.strip() for chunk in chunks if chunk.strip()]
-    return chunks
-
-
-def get_unmatched_tokens(message: Message,
-                         tokens: Optional[list] = None) -> List[str]:
-    """
-    Strips the matched intent keywords from the utterance and returns the
-    remaining tokens
-    :param message: Message associated with intent match
-    :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :returns: list of tokens not associated with intent vocab
-    """
-    tokens = tokens or tokenize_utterance(message)
-    unmatched = [chunk for chunk in tokens if
-                 not any([tag["match"] == chunk
-                          for tag in message.data["__tags__"]])]
-    return unmatched
+    return Alert.create(**data)
 
 
 def parse_repeat_from_message(message: Message,
@@ -246,7 +293,7 @@ def parse_repeat_from_message(message: Message,
     :returns: list of parsed repeat Weekdays or timedelta between occurrences
     """
     repeat_days = list()
-    lang = message.data.get("lang", "en-us")
+    lang = message.data.get("lang") or get_default_lang()
     load_language(lang)
     if message.data.get("everyday"):
         repeat_days = [Weekdays(i) for i in range(0, 7)]
@@ -257,26 +304,32 @@ def parse_repeat_from_message(message: Message,
     elif message.data.get("repeat"):
         tokens = tokens or tokenize_utterance(message)
         repeat_index = tokens.index(message.data["repeat"]) + 1
+        if repeat_index > len(tokens)-1:
+            return []
+
         repeat_clause = tokens.pop(repeat_index)
         repeat_days = list()
         remainder = ""
-        default_time = dt.time()
+        zero_hour = dt.time()
         # Parse repeat days
-        for word in repeat_clause.split():  # Iterate over possible weekdays
-            if word.isnumeric():
-                # Don't try to parse time intervals
-                remainder += f' {word}'
-                continue
-            extracted_content = extract_datetime(word)
-            if not extracted_content:
-                remainder += f' {word}'
-                continue
-            extracted_dt = extracted_content[0]
-            if extracted_dt.time() == default_time:
-                repeat_days.append(Weekdays(extracted_dt.weekday()))
-                remainder += '\n'
-            else:
-                remainder += f' {word}'
+        if voc_match(repeat_clause, "days", lang):
+            for word in repeat_clause.split():  # Iterate over possible weekdays
+                if word.isnumeric():
+                    # Don't try to parse time intervals
+                    remainder += f' {word}'
+                    continue
+                extracted_content = extract_datetime(word, lang=lang)
+                if not extracted_content:
+                    remainder += f' {word}'
+                    continue
+                extracted_dt = extracted_content[0]
+                if extracted_dt.time() == zero_hour:
+                    repeat_days.append(Weekdays(extracted_dt.weekday()))
+                    remainder += '\n'
+                else:
+                    remainder += f' {word}'
+            LOG.debug(("Parsed repeat days from message: "
+                       f"{[d.name for d in repeat_days]}"))
 
         # Parse repeat interval
         if not repeat_days:
@@ -289,6 +342,7 @@ def parse_repeat_from_message(message: Message,
                 duration, remainder = extracted_duration
                 if remainder and remainder.strip():
                     tokens.insert(repeat_index, remainder.strip())
+                LOG.debug("Parsed repeat frequency from message: {duration}")
                 return duration
 
         if remainder:
@@ -302,77 +356,122 @@ def parse_repeat_from_message(message: Message,
 
 def parse_end_condition_from_message(message: Message,
                                      tokens: Optional[list] = None,
-                                     timezone: dt.tzinfo = dt.timezone.utc) \
-        -> Optional[dt.datetime]:
+                                     timezone: dt.tzinfo = None,
+                                     anchor_time: dt.datetime = None) \
+        -> Union[dt.datetime, dt.timedelta, None]:
     """
     Parses an end condition from the utterance. If tokens are provided, handled
     tokens are removed.
     :param message: Message associated with intent match
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :param timezone: timezone of request, defaults to utc
+    :param timezone: timezone of request, defaults to mycroft location
     :returns: extracted datetime of end condition, else None
     """
-    tokens = tokens or tokenize_utterance(message)
-    anchor_date = dt.datetime.now(timezone)
+    lang = message.data.get("lang") or get_default_lang()
+    load_language(lang)
 
+    tokens = tokens or tokenize_utterance(message)
+    timezone = timezone or get_default_tz()
+    anchor_date = anchor_time or dt.datetime.now(timezone)
     if message.data.get("until"):
-        lang = message.data.get("lang") or "en-us"
-        load_language(lang)
         idx = tokens.index(message.data["until"]) + 1
+        if idx > len(tokens)-1:
+            return None
         end_clause = tokens.pop(idx)
 
-        end_time = None
-        extracted_dt = extract_datetime(end_clause, anchor_date, lang)
-        if extracted_dt:
-            end_time, remainder = extracted_dt
-            tokens.insert(idx, remainder)
+        extracted_duration = extract_duration(end_clause, lang)
+        # extract duration first because of overlaps
+        if extracted_duration and not extracted_duration[0]:
+            # Replace "the next week" with "1 week", etc.
+            extracted_duration = extract_duration(
+                f"1 {extracted_duration[1]}", lang)
+        if extracted_duration and extracted_duration[0]:
+            end_time, remainder = extracted_duration
         else:
-            extracted_duration = extract_duration(end_clause, lang)
-            if extracted_duration and not extracted_duration[0]:
-                # Replace "the next week" with "1 week", etc.
-                extracted_duration = extract_duration(
-                    f"1 {extracted_duration[1]}", lang)
-            if extracted_duration and extracted_duration[0]:
-                duration, remainder = extracted_duration
-                tokens.insert(idx, remainder)
-                end_time = anchor_date + duration
+            extracted_dt = extract_datetime(end_clause, anchor_date, lang)
+            if extracted_dt is None:
+                end_time = extracted_dt
+                remainder = end_clause
+            else:
+                end_time, remainder = extracted_dt
+        tokens.insert(idx, remainder)
+            
+        LOG.debug(f"Parsed end time from message: {end_time}")
         return end_time
+    elif message.data.get("all_day"):
+        return anchor_date.replace(hour=23, minute=59, second=59)
 
     return None
 
 
 def parse_alert_time_from_message(message: Message,
-                                  tokens: Optional[list] = None,
-                                  timezone: dt.tzinfo = dt.timezone.utc,
+                                  tokens: Tokens = None,
+                                  timezone: dt.tzinfo = None,
                                   anchor_time: dt.datetime = None) -> \
         Optional[dt.datetime]:
     """
     Parse a requested alert time from the request utterance
     :param message: Message associated with intent match
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :param timezone: timezone of request, defaults to utc
+    :param timezone: timezone of request, defaults to mycroft location
+    :param anchor_time: The base datetime the utterance is relative to
     :returns: Parsed datetime for the alert or None if no time is extracted
     """
-    anchor_time = anchor_time or dt.datetime.now(timezone)
+    lang = message.data.get("lang") or get_default_lang()
+    load_language(lang)
+
+    timezone = timezone or get_default_tz()
     tokens = tokens or tokenize_utterance(message)
-    remainder_tokens = get_unmatched_tokens(message, tokens)
-    load_language(message.data.get("lang") or _default_lang)
+    anchor_time = anchor_time or dt.datetime.now(timezone)
+
+    # ensure correct tzinfo (dt.timezone(dt.timedelta))
+    # TODO Test if this is only relevat for unittests
+    # tz = anchor_time.tzinfo.utcoffset(anchor_time)
+    # anchor_time = anchor_time.replace(tzinfo=dt.timezone(tz))
+
     alert_time = None
-    for token in remainder_tokens:
-        extracted = extract_duration(token)
+    for token in tokens.unmatched():
+        LOG.debug(f"Trying to parse time from token: {token}")
+        extracted = extract_duration(token, lang=lang)
         if extracted and extracted[0]:
             duration, remainder = extracted
             alert_time = anchor_time + duration
             tokens[tokens.index(token)] = remainder
             break
-        extracted = extract_datetime(token, anchorDate=anchor_time)
+        extracted = extract_datetime(token, anchorDate=anchor_time, lang=lang)
         if extracted and extracted[0]:
             alert_time, remainder = extracted
             tokens[tokens.index(token)] = remainder
             break
+    LOG.debug(f"Parsed alert time from message: {alert_time}")
+    # mark the tokens as time stripped
+    tokens.extracted_time = alert_time
+    tokens.time_stripped = True
     return alert_time
 
 
+def parse_timedelta_from_message(message: Message,
+                                 tokens: Tokens = None,
+                                 timezone: dt.tzinfo = None,
+                                 anchor_time: dt.datetime = None) -> \
+        Optional[dt.timedelta]:
+    """
+    Parse the timedelta relative to the anchortime from the request utterance
+    :param message: Message associated with intent match
+    :param tokens: optional tokens parsed from message by `tokenize_utterances`
+    :param timezone: timezone of request, defaults to mycroft location
+    :param anchor_time: The base datetime the utterance is relative to
+    :returns: Parsed datetime for the alert or None if no time is extracted
+    """
+    timezone = timezone or get_default_tz()
+    anchor_time = anchor_time or dt.datetime.now(timezone)
+
+    alert_time = parse_alert_time_from_message(message, tokens,
+                                               timezone, anchor_time)
+
+    return alert_time-anchor_time if alert_time else None
+
+# TODO: Toss - should be handled via OCP
 def parse_audio_file_from_message(message: Message,
                                   tokens: Optional[list] = None) -> \
         Optional[str]:
@@ -383,10 +482,12 @@ def parse_audio_file_from_message(message: Message,
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
     :returns: extracted audio file path, else None
     """
+    tokens = tokens or tokenize_utterance(message)
+    file = None
     if message.data.get("playable"):
-        # TODO: Parse an audio filename here and remove matched token
-        pass
-    return None
+        name = parse_alert_name_from_message(message, tokens)
+        file = find_resource_file(name, ("wav", "mp3", "ogg",))
+    return file
 
 
 def parse_script_file_from_message(message: Message,
@@ -430,19 +531,21 @@ def parse_alert_priority_from_message(message: Message,
     :param message: Message associated with request
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
     """
-    # TODO: Parse requested priority from utterance
+    tokens = tokens or tokenize_utterance(message)
+    load_language(message.data.get("lang") or get_default_lang())
+
+    priority = AlertPriority.AVERAGE.value
     if message.data.get("script"):
-        priority = _SCRIPT_PRIORITY
-    else:
-        priority = AlertPriority.AVERAGE
+        priority = _SCRIPT_PRIORITY.value
+    elif message.data.get("priority"):
+        num = extract_number(" ".join(tokens.unmatched()))
+        priority = num if num and num in range(1,11) else priority
     return priority
 
 
 def parse_alert_name_from_message(message: Message,
-                                  tokens: Optional[list] = None,
-                                  strip_datetimes: bool = False,
-                                  articles: List[str] = None) -> \
-        Optional[str]:
+                                  tokens: Tokens = None,
+                                  noise_words: List[str] = None) -> str:
     """
     Try to parse an alert name from unparsed tokens
     :param message: Message associated with the request
@@ -451,47 +554,47 @@ def parse_alert_name_from_message(message: Message,
     :param articles: list of words to strip from a candidate alert name
     :returns: Best guess at a name extracted from tokens
     """
-    def _strip_datetime_from_token(t):
-        try:
-            _, t = extract_duration(t, lang)
-        except TypeError:
-            pass
-        try:
-            _, t = extract_datetime(t, lang=lang)
-        except TypeError:
-            pass
-        return t
-
-    specified_tokens = tokens
-    lang = message.data.get("lang") or "en-us"
-    articles = articles or list()
-
+    lang = message.data.get("lang") or get_default_lang()
     load_language(lang)
+
+    tokens = tokens or tokenize_utterance(message)
+    tokens.strip_time()
+
+    noise_words = noise_words or get_words_list("noise_words.voc", lang)
     candidate_names = list()
     # First try to parse a name from the remainder tokens
-    tokens = get_unmatched_tokens(message, tokens)
-    for token in tokens:
-        if strip_datetimes:
-            token = _strip_datetime_from_token(token)
-        normalized = " ".join([word for word in normalize(token, lang).split()
-                               if word not in articles])
-        if normalized:
-            candidate_names.append(normalized)
-    # Next try to extract a name from the full tokenized utterance
-    if not candidate_names and specified_tokens:
-        LOG.info("No possible names parsed, checking all tokens")
-        all_untagged_tokens = get_unmatched_tokens(message)
-        for token in all_untagged_tokens:
-            token = _strip_datetime_from_token(token)
-            normalized = " ".join([word for word in
-                                   normalize(token, lang).split()
-                                   if word not in articles])
-            if normalized:
-                candidate_names.append(normalized)
+    for chunk in tokens.unmatched():
+        cleaned_chunk = " ".join([word.lower() for word in chunk.split()
+                                  if word not in noise_words])
+        if cleaned_chunk:
+            candidate_names.append(cleaned_chunk)
+    # default name
     if not candidate_names:
-        return None
+        return ""
+
     LOG.info(f"Parsed possible names: {candidate_names}")
     return candidate_names[0]
+
+
+def parse_alert_name_and_time_from_message(
+    message: Message,
+    tokens: list = None,
+    timezone: dt.tzinfo = None,
+    anchor_time: dt.datetime = None
+) -> Tuple[Optional[str], Optional[dt.datetime]]:
+    """
+    Parse an alert name and time from a request
+    :param message: Message associated with request
+    :param tokens: optional tokens parsed from message by `tokenize_utterances`
+    :param timezone: timezone of request, defaults to mycroft location
+    :returns tuple containing alert name and alert time
+    """
+    tokens = tokens or tokenize_utterance(message)
+    timezone = timezone or get_default_tz()
+    return (
+        parse_alert_time_from_message(message, tokens, timezone, anchor_time),
+        parse_alert_name_from_message(message, tokens),
+    )
 
 
 def parse_alert_context_from_message(message: Message) -> dict:
@@ -500,11 +603,186 @@ def parse_alert_context_from_message(message: Message) -> dict:
     :param message: Message associated with the request
     :returns: dict context to include in Alert object
     """
+    # TODO: what could the rest of message context be good for? {**message.context, **required_context}
     required_context = {
-        "user": message.context.get("user") or _DEFAULT_USER,
-        "ident": str(uuid()),
+        "source": message.context.get("source") or ["skills"],
+        "destination": message.context.get("destination") or "audio",
+        # "session": message.context.get("session") or dict(),
+        "user": message.context.get("user") or LOCAL_USER,
+        "lang": message.data.get("lang") or get_default_lang(),
+        "ident": message.context.get("ident") or str(uuid4()),
         "origin_ident": message.context.get('ident'),
         "created": message.context.get("timing",
                                        {}).get("handle_utterance") or time()
     }
-    return {**message.context, **required_context}
+    return required_context
+
+
+# TODO: no need for timezone in the signature
+def extract_dt_or_duration(
+    text: str,
+    anchor_time: dt.datetime = None,
+    timezone: dt.tzinfo = None,
+    add: bool = True
+) -> Union[dt.datetime, dt.timedelta, None]:
+    """
+    Helper to extract either a duration or datetime
+    If a duration is extracted and no anchor date is passed the timedelta will be
+    returned else added/substracted to/from the anchor date
+    :param text: the string to be parsed
+    :param anchorDate: a datetime to which a timedelta is added to
+    :param add: whether a duration should be added or substracted
+    """
+    # timezone = timezone or get_default_tz()
+    # if anchor_time:
+    #     timezone = anchor_time.tzinfo
+    # else:
+    #     anchor_time = dt.datetime.now(timezone)
+
+    time_, remainder = extract_duration(text)
+    if time_ is None:
+        #now = dt.datetime.now(timezone)
+        time_, remainder = extract_datetime(text, anchorDate=anchor_time) or (None, text)
+    if isinstance(time_, (dt.timedelta, relativedelta)): 
+        if anchor_time is not None:
+            return anchor_time + time_ if add else anchor_time - time_, remainder
+        else:
+            return time_ if add else time_ * -1, remainder
+     
+    return time_, remainder
+
+
+def parse_relative_time_from_message(message: Message,
+                                     tokens: Optional[Tokens] = None,
+                                     timezone: Optional[dt.tzinfo] = None,
+                                     anchor_time: Optional[dt.datetime]= None):
+
+    lang = message.data.get("lang") or get_default_lang()
+    earlier = "earlier" in message.data
+    load_language(lang)
+
+    timezone = timezone or get_default_tz()
+    tokens = tokens or tokenize_utterance(message)
+
+    for token in tokens.unmatched():
+        time_, remainder = extract_dt_or_duration(token,
+                                                  anchor_time,
+                                                  timezone,
+                                                  not earlier)
+        if time_:
+            tokens[tokens.index(token)] = remainder
+            return time_
+    return None
+
+
+def parse_timeframe_from_message(message: Message,
+                                 tokens: Optional[Tokens] = None,
+                                 timezone: Optional[dt.tzinfo] = None):
+    end = None
+    tokens = tokens or tokenize_utterance(message)
+    begin = parse_alert_time_from_message(message, tokens, timezone)
+
+    if message.data.get("and"):
+        end = parse_alert_time_from_message(message,
+                                            tokens,
+                                            timezone,
+                                            anchor_time=begin)
+        if end:
+            # Set this to next day if 'end' is parsed as 00:00
+            # queries about "today and tomorrow" should likely include
+            # tomorrow
+            if end.minute == 0 and end.hour == 0:
+                end = end + dt.timedelta(days=1, seconds=-1)
+    # if parsed time is 00:00 this is considerred a whole day check
+    # eg "today", "tomorrow", "3rd of october", "tuesday"
+    if end is None and begin and begin.minute == 0 and begin.hour == 0:
+        end = begin + dt.timedelta(days=1, seconds=-1)
+    
+    return begin, end    
+
+
+def validate_dt_or_delta(response: str) -> Union[dt.datetime, dt.timedelta, str]:
+    """
+    Validates if the sentence contains a datetime or duration
+    """
+
+    if voc_match(response, "no"):
+        return "no"
+    else:
+        return extract_dt_or_duration(response)[0]
+
+
+def validate_dt(response: str) -> Union[dt.datetime, str]:
+    """
+    Validates if the sentence contains a datetime
+    """
+    if voc_match(response, "no"):
+        return "no"
+    else:
+        dt_ = extract_datetime(response)
+        return dt_ if dt_ is None else dt_[0]
+
+
+def validate_number(response: str) -> int:
+    num = extract_number(response)
+    if num:
+        return int(num)
+    return False
+
+
+def get_week_range(ref_date: dt.datetime) -> Tuple[dt.datetime, dt.datetime]:
+    """
+    Get the start and end dates of the week containing the given reference date.
+
+    Args:
+        ref_date (datetime): The reference date to use for calculating the week
+                             range.
+
+    Returns:
+        Tuple[datetime, datetime]: A tuple of datetime objects representing the
+                                   start and end dates of the week containing the
+                                   given reference date.
+    """
+    start = ref_date - dt.timedelta(days=ref_date.weekday())
+    end = start + dt.timedelta(days=6)
+    return start, end
+
+
+def fuzzy_match(test: str, against: str, confidence: int = None) -> Any:
+    """
+    Rapidfuzz matcher
+    Compares with different mechanisms (ratio/partial ratio/token sort ratio)
+    to account for potential STT misbehaviour
+    If no confindence cut [0-100] is passed, it returns the aggegated confidence
+    else it compares the aggegated confidence to the confidence cut
+    :param test: the test string
+    :param against: the string to test against
+    :param conf: confidence cut (optional)
+    """
+
+    ratio = fuzz.ratio(test, against)
+    partial_ratio = fuzz.partial_ratio(test, against)
+    token_sort_ratio = fuzz.token_sort_ratio(test, against)
+    best = max(ratio, partial_ratio, token_sort_ratio)
+    #LOG.debug(f"Fuzzy Match value {best}")
+
+    return best > confidence if confidence is not None else best
+
+def fuzzy_match_alerts(test: List[Alert], against: str, confidence: int = None) \
+    -> Optional[Alert]:
+    """
+    Fuzzy matches a list of Alerts and returns the best match (alert names are
+    tested)
+    If a confidence cut [0-100] is passed only those matched above are considerred
+    :param test: the alert list to test
+    :param against: the string to test against
+    :param conf: confidence cut (optional)
+    """
+    result = []
+    for alert in test:
+        fuzzy_conf = fuzzy_match(alert.alert_name, against)
+        if confidence and fuzzy_conf > confidence:
+            result.append((alert, fuzzy_conf))
+    if result:
+        return sorted(result, key=lambda x:x[1])[-1][0]
+    return None

@@ -6,6 +6,8 @@
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:create_timer",
+    "create": "start",
+    "timer": "timer",
     "target": null,
     "confidence": 0.3111111111111111,
     "__tags__": [
@@ -20,7 +22,7 @@
             "data": [
               [
                 "start",
-                "skill_alerts_neongeckocomset"
+                "skill_alerts_neongeckocomcreate"
               ]
             ],
             "confidence": 1.0
@@ -50,9 +52,7 @@
         "from_context": false
       }
     ],
-    "utterance": "start a timer for 5 minutes",
-    "set": "start",
-    "timer": "timer"
+    "utterance": "start a timer for 5 minutes"
   },
   "context": {
     "client_name": "mycroft_cli",
