@@ -51,8 +51,6 @@ from skill_alerts.util.locale import (
     get_alert_type
 )
 
-_SCRIPT_PRIORITY = AlertPriority.HIGHEST
-
 
 class Tokens(list):
     def __init__(self, chunks: list, message: Message = None):
@@ -143,6 +141,7 @@ def tokenize_utterance(message: Message) -> Tokens[list]:
     tokens = Tokens([normalize(chunk, lang=lang, remove_articles=False).lower()
                      for chunk in chunks if chunk.strip()], message)
     return tokens
+
 
 def round_nearest_minute(alert_time: dt.datetime,
                          cutoff: dt.timedelta = dt.timedelta(minutes=10)) -> \
@@ -245,8 +244,6 @@ def build_alert_from_intent(message: Message) -> Optional[Alert]:
     alert_time = parse_alert_time_from_message(message, tokens, timezone, anchor_time)
     until = parse_end_condition_from_message(message, tokens, timezone, alert_time or anchor_time)
     data["audio_file"] = parse_audio_file_from_message(message, tokens)
-    data["script_file"] = parse_script_file_from_message(message, tokens)
-    #alert_time = parse_alert_time_from_message(message, tokens, timezone, anchor_time)
 
     if isinstance(until, (dt.timedelta, relativedelta,)): 
         until = (alert_time or anchor_time) + until
@@ -490,38 +487,6 @@ def parse_audio_file_from_message(message: Message,
     return file
 
 
-def parse_script_file_from_message(message: Message,
-                                   tokens: Optional[list] = None,
-                                   bus: MessageBusClient = None) -> \
-        Optional[str]:
-    """
-    Parses a requested script file from the utterance. If tokens are provided,
-    handled tokens are removed.
-    :param message: Message associated with intent match
-    :param bus: Connected MessageBusClient to query available scripts
-    :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :returns: validated script filename, else None
-    """
-    bus = bus or MessageBusClient()
-    if not bus.started_running:
-        bus.run_in_thread()
-    if message.data.get("script"):
-        # TODO: Validate/test this DM
-        # check if CC can access the required script and get its valid name
-        resp = bus.wait_for_response(Message("neon.script_exists",
-                                             data=message.data,
-                                             context=message.context))
-        is_valid = resp.data.get("script_exists", False)
-        consumed = resp.data.get("consumed_utt", "")
-        if tokens and consumed:
-            for token in tokens:
-                if consumed in token:
-                    # TODO: Split on consumed words and insert unmatched tokens
-                    pass
-        return resp.data.get("script_name", None) if is_valid else None
-    return None
-
-
 def parse_alert_priority_from_message(message: Message,
                                       tokens: Optional[list] = None) -> \
         AlertPriority:
@@ -535,9 +500,7 @@ def parse_alert_priority_from_message(message: Message,
     load_language(message.data.get("lang") or get_default_lang())
 
     priority = AlertPriority.AVERAGE.value
-    if message.data.get("script"):
-        priority = _SCRIPT_PRIORITY.value
-    elif message.data.get("priority"):
+    if message.data.get("priority"):
         num = extract_number(" ".join(tokens.unmatched()))
         priority = num if num and num in range(1,11) else priority
     return priority

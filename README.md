@@ -215,8 +215,6 @@ _The notifications sometimes get mixed up, this is a known issue and it's worked
 - __When polpulating a list, the last element is followed by an "unknown" utterance.__  
 _This is a known issue and will be fixed in the next release. It's a problem with the way the skill is handling the input in a response context. It's not critical and can be ignored for now. The list is populated correctly most of the time_
 
-alerts executing scripts isn't tested at this point
-
 ## Recommended Versions
 These aren't hard requirements as preferences may vary, but recommended
 GUI: `skill-ovos-homescreen >= 0.0.3a6` (There is also a [PR](https://github.com/OpenVoiceOS/skill-ovos-homescreen/pull/92) pending)

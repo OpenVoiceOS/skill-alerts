@@ -407,20 +407,6 @@ class Alert:
         Returns the audio filename launched on expiration
         """
         return self._data.get("audio_file")
-
-    @property
-    def script_filename(self) -> Optional[str]:
-        """
-        Returns the script filename launched on expiration
-        """
-        return self._data.get("script_filename")
-
-    @script_filename.setter
-    def script_filename(self, filename):
-        """
-        Sets the script filename launched on expiration
-        """
-        self._data["script_filename"] = filename
     
     @property
     def ocp_request(self) -> str:
@@ -446,8 +432,6 @@ class Alert:
             return "ocp"
         elif self.audio_file:
             return "audio_file"
-        elif self.script_filename:
-            return "script"
         return None
     
     @property
@@ -460,8 +444,6 @@ class Alert:
             return self.ocp_request
         elif self.audio_file:
             return self.audio_file
-        elif self.script_filename:
-            return self.script_filename
         return None
     
     # DAV properties
@@ -697,7 +679,6 @@ class Alert:
         repeat_days: Set[Weekdays] = None,
         until: Union[dt.datetime, str] = None,
         audio_file: str = None,
-        script_file: str = None,
         dav_calendar: str = None,
         dav_service: str = None,
         context: dict = None,
@@ -713,7 +694,6 @@ class Alert:
         :param repeat_days: set of weekdays for an alert to repeat
         :param until: datetime of final repeat/end of event
         :param audio_file: audio_file to playback on alert expiration
-        :param script_file: ncs filename to run on alert expiration
         :param context: Message context associated with alert
         """
         from .parse_utils import get_default_alert_name
@@ -782,7 +762,6 @@ class Alert:
             "until": until.isoformat() if until else None,
             "alert_name": alert_name,
             "audio_file": audio_file,
-            "script_filename": script_file,
             "context": context,
             "dav_calendar": dav_calendar,
             "dav_service": dav_service,

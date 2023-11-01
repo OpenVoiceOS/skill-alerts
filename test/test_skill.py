@@ -1377,8 +1377,6 @@ class TestSkill(unittest.TestCase):
         self.skill.speak_dialog.reset_mock()
         self.skill._display_alarms.reset_mock()
 
-        # TODO (recurring) script/playback
-
         self.skill._display_timers = real_display_timer
         self.skill._display_alarms = real_display_alarm
 
@@ -1420,10 +1418,6 @@ class TestSkill(unittest.TestCase):
         self.skill.settings["timeout_min"] = 2        
 
     def test_alert_expired(self):
-        # TODO
-        pass
-        
-    def test_run_notify_expired(self):
         # TODO
         pass
 
@@ -1765,7 +1759,6 @@ class TestAlert(unittest.TestCase):
             repeat_frequency=3600,
             until=until_valid,
             audio_file="audio_file",
-            script_file="script_file",
             context={"testing": True, "created": now_time_valid.timestamp()},
         )
 
@@ -1792,7 +1785,6 @@ class TestAlert(unittest.TestCase):
             repeat_frequency=3600,
             until=until_valid,
             audio_file="audio_file",
-            script_file="script_file",
             context={"testing": True,
                      "created": now_time_valid.timestamp(),
                      "ident": "ident"},
@@ -1813,7 +1805,6 @@ class TestAlert(unittest.TestCase):
         )
         self.assertEqual(future_alert_no_repeat.alert_name, "test alert name")
         self.assertEqual(future_alert_no_repeat.audio_file, "audio_file")
-        self.assertEqual(future_alert_no_repeat.script_filename, "script_file")
         self.assertFalse(future_alert_no_repeat.is_expired)
         self.assertEqual(
             future_alert_no_repeat.expiration,
@@ -1831,7 +1822,6 @@ class TestAlert(unittest.TestCase):
             alert_type=AlertType.REMINDER,
             priority=AlertPriority.AVERAGE.value,
             audio_file="audio_file",
-            script_file="script_file",
             context={"testing": True,
                      "created": now_time_valid.timestamp(),
                      "ident": "ident"},
@@ -1850,7 +1840,6 @@ class TestAlert(unittest.TestCase):
         )
         self.assertEqual(expired_alert_no_repeat.alert_name, "expired alert name")
         self.assertEqual(expired_alert_no_repeat.audio_file, "audio_file")
-        self.assertEqual(expired_alert_no_repeat.script_filename, "script_file")
         self.assertTrue(expired_alert_no_repeat.is_expired)
         self.assertIsNone(expired_alert_no_repeat.expiration)
         self.assertIsNone(expired_alert_no_repeat.prenotification)
@@ -1863,7 +1852,6 @@ class TestAlert(unittest.TestCase):
             alert_type=AlertType.TODO,
             priority=AlertPriority.AVERAGE.value,
             audio_file="audio_file",
-            script_file="script_file",
             context={"related_to": "uuid",
                      "created": now_time_valid.timestamp(),
                      "ident": "ident"},
@@ -2082,7 +2070,6 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(alert_vevent.ident, "ident")
         self.assertEqual(alert_vevent.alert_name, "alert_name")
         self.assertIsNone(alert_vevent.audio_file)
-        self.assertIsNone(alert_vevent.script_filename)
         self.assertEqual(alert_vevent.is_expired, False)
         self.assertEqual(alert_vevent.expiration, expiration)
         self.assertEqual(
@@ -2113,7 +2100,6 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(alert_vtodo1.ident, "uuid_parent")
         self.assertEqual(alert_vtodo1.alert_name, "alert_name")
         self.assertIsNone(alert_vtodo1.audio_file)
-        self.assertIsNone(alert_vtodo1.script_filename)
         self.assertEqual(alert_vtodo1.is_expired, False)
         self.assertEqual(alert_vtodo1.expiration, creation + dt.timedelta(minutes=30))
         self.assertIsNone(alert_vtodo1.prenotification)
@@ -2141,7 +2127,6 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(alert_vtodo2.related_to, "uuid_parent")
         self.assertEqual(alert_vtodo2.alert_name, "alert_name")
         self.assertIsNone(alert_vtodo2.audio_file)
-        self.assertIsNone(alert_vtodo2.script_filename)
         self.assertEqual(alert_vtodo2.is_expired, False)
         self.assertIsNone(alert_vtodo2.expiration)
         self.assertIsNone(alert_vtodo2.prenotification)
@@ -3272,10 +3257,6 @@ class TestParseUtils(unittest.TestCase):
         # TODO
         pass
 
-    def test_parse_script_file_from_message(self):
-        # TODO
-        pass
-
     def test_parse_alert_name_from_message(self):
         from skill_alerts.util.parse_utils import parse_alert_name_from_message
 
@@ -3429,7 +3410,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertGreaterEqual(alert.time_to_expiration, dt.timedelta(seconds=1))
             self.assertIn(alert.expiration.time(), (dt.time(hour=10), dt.time(hour=22)))
@@ -3455,7 +3435,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertGreaterEqual(alert.time_to_expiration, dt.timedelta(seconds=1))
             self.assertEqual(alert.expiration.time(), dt.time(hour=7))
@@ -3485,7 +3464,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(alert.context, dict)
             self.assertIsInstance(alert.alert_name, str)
             self.assertIsNone(alert.audio_file)
-            self.assertIsNone(alert.script_filename)
             self.assertFalse(alert.is_expired)
             self.assertAlmostEqual(
                 alert.time_to_expiration.total_seconds(),
@@ -3517,7 +3495,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(timer.context, dict)
             self.assertIsInstance(timer.alert_name, str)
             self.assertIsNone(timer.audio_file)
-            self.assertIsNone(timer.script_filename)
             self.assertFalse(timer.is_expired)
             self.assertIsInstance(timer.time_to_expiration, dt.timedelta)
             self.assertIsInstance(timer.expiration, dt.datetime)
@@ -3552,7 +3529,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(reminder.context, dict)
             self.assertIsInstance(reminder.alert_name, str)
             self.assertIsNone(reminder.audio_file)
-            self.assertIsNone(reminder.script_filename)
             self.assertFalse(reminder.is_expired)
             self.assertIsInstance(reminder.time_to_expiration, dt.timedelta)
             self.assertIsInstance(reminder.expiration, dt.datetime)
@@ -3678,7 +3654,6 @@ class TestParseUtils(unittest.TestCase):
             self.assertIsInstance(reminder.context, dict)
             self.assertIsInstance(reminder.alert_name, str)
             self.assertIsNone(reminder.audio_file)
-            self.assertIsNone(reminder.script_filename)
             self.assertFalse(reminder.is_expired)
             self.assertIsInstance(reminder.time_to_expiration, dt.timedelta)
             self.assertIsInstance(reminder.expiration, dt.datetime)
@@ -3899,7 +3874,7 @@ class TestSkillLoading(unittest.TestCase):
     regex = set()
     # vocab is lowercase .voc file basenames
     vocab = {'timer', 'repeat', 'next', 'everyday', 'media', 'snooze',
-             'script', 'cancel', 'items', 'until', 'alert', 'list', 'stored',
+             'cancel', 'items', 'until', 'alert', 'list', 'stored',
              'dismiss', 'quiet', 'todo', 'playable', 'put', 'remaining', 'no',
              'weekdays', 'weekends', 'noise_words', 'remind', 'reminder', 
              'priority', 'days', 'event', 'miss', 'query', 'time', 'earlier',
@@ -3922,7 +3897,7 @@ class TestSkillLoading(unittest.TestCase):
               'error_no_time', 'repeating_every', 'list_alert_none_upcoming',
               'dav_calendar_list', 'list_alert_intro', 'confirm_todo_set',
               'next_alert', 'pick_multiple_entries',
-              'alert_overlapping_duration_ask', 'confirm_alert_recurring_script',
+              'alert_overlapping_duration_ask',
               'dav_inactive', 'expired_reminder', 'at_time',
               'list_todo_dont_exist', 'list_todo_reminder', 'list_deleted',
               'confirm_dismiss_alert', 'alert_expiration_past',
@@ -3935,7 +3910,7 @@ class TestSkillLoading(unittest.TestCase):
               'alert_overlapping_ask', 'list_item_delete_selection_intro',
               'timer_status', 'list_alert_missed', 'selection_dav_service',
               'confirm_alert_recurring', 'alarm_ask_time',
-              'confirm_alert_script', 'list_alert_timeframe_none',
+              'list_alert_timeframe_none',
               'ocp_missing', 'expired_alert', 'error_no_list_name',
               'list_todo_num_deleted', 'alert_prenotification',
               'weekday', 'alarm', 'thursday', 'until', 'sunday',

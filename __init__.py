@@ -86,7 +86,6 @@ from .util.parse_utils import (
     parse_alert_name_and_time_from_message,
     parse_end_condition_from_message,
     parse_alert_priority_from_message,
-    parse_script_file_from_message,
     parse_audio_file_from_message,
     parse_repeat_from_message,
     get_week_range,
@@ -292,7 +291,7 @@ class AlertSkill(OVOSSkill):
                     .optionally("playable").optionally("weekdays")
                     .optionally("weekends").optionally("everyday")
                     .optionally("repeat").optionally("until")
-                    .optionally("script").optionally("priority"))
+                    .optionally("priority"))
     def handle_create_alarm(self, message: Message):
         """
         Intent handler for creating an alarm
@@ -317,8 +316,7 @@ class AlertSkill(OVOSSkill):
                     .optionally("question").optionally("playable")
                     .optionally("weekdays").optionally("weekends")
                     .optionally("everyday").optionally("repeat")
-                    .optionally("until").optionally("script")
-                    .optionally("priority"))
+                    .optionally("until").optionally("priority"))
     def handle_create_alarm_alt(self, message: Message):
         """
         Alternate intent handler for creating an alarm
@@ -383,7 +381,7 @@ class AlertSkill(OVOSSkill):
                     .optionally("playable").optionally("weekdays")
                     .optionally("weekends").optionally("everyday")
                     .optionally("repeat").optionally("until")
-                    .optionally("script").optionally("priority"))
+                    .optionally("priority"))
     def handle_create_reminder(self, message: Message):
         """
         Intent handler for creating a reminder
@@ -461,9 +459,8 @@ class AlertSkill(OVOSSkill):
                     .optionally("question").optionally("playable")
                     .optionally("everyday").optionally("weekdays")
                     .optionally("weekends").optionally("repeat")
-                    .optionally("until").optionally("script")
-                    .optionally("priority").optionally("remind")
-                    .optionally("all_day"))
+                    .optionally("until").optionally("priority")
+                    .optionally("remind").optionally("all_day"))
     def handle_create_event(self, message: Message):
         """
         Intent handler for creating an event. Wraps handle_create_reminder
@@ -583,7 +580,7 @@ class AlertSkill(OVOSSkill):
             else:
                 self.speak_dialog("error_no_repeat", {"kind": spoken_type})
         else:
-            raise NotImplementedError("script/playable not implemented")
+            return
 
         self._display_alert(alert)
         self.alert_manager.sync_dav_item(alert)
@@ -591,7 +588,7 @@ class AlertSkill(OVOSSkill):
     @intent_handler(IntentBuilder("ChangeMediaProperties")
                     .require("change").optionally("next")
                     .one_of("alarm", "reminder", "event", "timer")
-                    .one_of("script", "playable"))
+                    .require("playable"))
     def handle_change_media_properties(self, message: Message):
 
         alert_type, spoken_type = get_alert_type_from_intent(message)
@@ -599,14 +596,7 @@ class AlertSkill(OVOSSkill):
         
         old_media = alert.media_type
         new_media = get_media_source_from_intent(message)
-        if new_media == "script":
-            script = parse_script_file_from_message(message, bus=self.bus)
-            if script:
-                alert.script_filename = script
-                self.speak_dialog()
-            else:
-                return self.speak_dialog("error_no_script", {"kind": spoken_type})
-        elif new_media == "file":
+        if new_media == "file":
             audio = parse_audio_file_from_message(message)
             if audio:
                 alert.audio_file = f"file:/{audio}"
@@ -1168,12 +1158,6 @@ class AlertSkill(OVOSSkill):
                                    'begin': spoken_alert_time,
                                    'remaining': duration},
                                   wait=True)
-            elif alert.script_filename:
-                self.speak_dialog("confirm_alert_script",
-                                  {'name': alert.alert_name,
-                                   'begin': spoken_alert_time,
-                                   'remaining': duration},
-                                  wait=True)
             else:
                 spoken_kind = spoken_alert_type(alert.alert_type, self.lang)
                 self.speak_dialog('confirm_alert_set',
@@ -1199,12 +1183,6 @@ class AlertSkill(OVOSSkill):
         # Notify repeating alert
         if alert.audio_file:
             self.speak_dialog('confirm_alert_recurring_playback',
-                              {'name': alert.alert_name,
-                               'begin': spoken_alert_time,
-                               'repeat': repeat_interval},
-                              wait=True)
-        elif alert.script_filename:
-            self.speak_dialog('confirm_alert_recurring_pscript',
                               {'name': alert.alert_name,
                                'begin': spoken_alert_time,
                                'repeat': repeat_interval},
@@ -1782,9 +1760,7 @@ class AlertSkill(OVOSSkill):
         """
         self._activate()
 
-        if alert.script_filename:
-            self._run_notify_expired(alert)
-        elif alert.ocp_request or alert.audio_file:
+        if alert.ocp_request or alert.audio_file:
             self._play_notify_expired(alert)
         elif alert.alert_type == AlertType.ALARM and not self.speak_alarm:
             self._play_notify_expired(alert)
@@ -1798,21 +1774,6 @@ class AlertSkill(OVOSSkill):
         if self.alert_manager.get_alert_status(alert.ident) == AlertState.ACTIVE \
                 and not alert.ocp_request:  # and alert.media is None
             self.alert_manager.mark_alert_missed(alert.ident)
-
-        # self._update_homescreen(alert)
-
-    def _run_notify_expired(self, alert: Alert):
-        """
-        Handle script file run on alert expiration
-        :param alert: Alert that has expired
-        """
-        message = Message("neon.run_alert_script",
-                          {"file_to_run": alert.script_filename},
-                          alert.context)
-        # emit a message telling CustomConversations to run a script
-        self.bus.emit(message)
-        LOG.info("The script has been executed with CC")
-        self.alert_manager.rm_alert(alert.ident)
 
     def _play_notify_expired(self, alert: Alert):
         """

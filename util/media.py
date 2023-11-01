@@ -100,9 +100,7 @@ def _update_lang2media(lang: str = ""):
 
 
 def get_media_source_from_intent(message: Message):
-    if message.data.get("script"):
-        return "script"
-    elif message.data.get("file"):
+    if message.data.get("file"):
         return "file"
     elif message.data.get("ocp"):
         return "ocp"

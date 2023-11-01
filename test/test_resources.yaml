@@ -36,7 +36,6 @@ vocab:
   - remind
   - reminder
   - repeat
-  - script
   - snooze
   - stored
   - time
@@ -69,8 +68,6 @@ dialog:
   - confirm_alert_playback
   - confirm_alert_recurring
   - confirm_alert_recurring_playback
-  - confirm_alert_recurring_script
-  - confirm_alert_script
   - confirm_alert_set
   - confirm_cancel_alert
   - confirm_cancel_all
