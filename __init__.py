@@ -54,18 +54,18 @@ from ovos_utils import create_daemon, classproperty
 from ovos_utils.process_utils import RuntimeRequirements
 from ovos_config import get_default_lang
 
-from .util import Weekdays, AlertState, MatchLevel, AlertPriority, WEEKDAYS, WEEKENDS, EVERYDAY
-from .util.ui_models import build_gui_data
-from .util.alert_manager import AlertManager, SYNC_LOCK
-from .util.alert import Alert, AlertType, DAVType, LOCAL_USER
-from .util.media import (
+from skill_alerts.util import Weekdays, AlertState, MatchLevel, AlertPriority, WEEKDAYS, WEEKENDS, EVERYDAY
+from skill_alerts.util.ui_models import build_gui_data
+from skill_alerts.util.alert_manager import AlertManager, SYNC_LOCK
+from skill_alerts.util.alert import Alert, AlertType, DAVType, LOCAL_USER
+from skill_alerts.util.media import (
     get_ocp_media_type,
     ocp_query,
     ocp_request,
     get_media_source_from_intent
 )
-from .util.config import use_24h_format, get_default_tz, DEFAULT_SETTINGS
-from .util.locale import (
+from skill_alerts.util.config import use_24h_format, get_default_tz, DEFAULT_SETTINGS
+from skill_alerts.util.locale import (
     translate,
     voc_match,
     spoken_duration,
@@ -75,7 +75,7 @@ from .util.locale import (
     get_alert_type_from_intent,
     datetime_display
 )
-from .util.parse_utils import (
+from skill_alerts.util.parse_utils import (
     tokenize_utterance,
     build_alert_from_intent,
     parse_alert_name_from_message,
