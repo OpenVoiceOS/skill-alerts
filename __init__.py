@@ -243,7 +243,7 @@ class AlertSkill(OVOSSkill):
         else:
             self.add_event("mycroft.ready", self.on_ready, once=True)
 
-        self.add_event("neon.get_events", self._get_events)
+        self.add_event("ovos.get_alerts", self._distribute_alerts)
         self.add_event("alerts.gui.dismiss_notification",
                        self._gui_dismiss_notification)
         self.add_event("ovos.gui.show.active.timers", self._on_display_gui)
@@ -1410,7 +1410,7 @@ class AlertSkill(OVOSSkill):
         return alerts[0]
 
     # Static parser methods
-    def _get_events(self, message):
+    def _distribute_alerts(self, message):
         """
         Handles a request to get scheduled events for a specified
         user and disposition.
@@ -1418,21 +1418,27 @@ class AlertSkill(OVOSSkill):
          and 'disposition' (pending/missed)
         """
         user = message.data.get("user")
-        disposition = message.data.get("disposition", "pending")
-
-        matched = self.alert_manager.get_alerts(user)
-
-        if disposition == "pending":
-            matched = matched["pending"]
-        elif disposition == "missed":
-            matched = matched["missed"]
+        alert_type = message.data.get("alert_type", "all").upper()
+        if alert_type not in AlertType.__members__:
+            LOG.error(f"Invalid alert type requested: {alert_type}")
+            self.bus.emit(message.response({"error": "Invalid alert type"}))
+            return
         else:
+            alert_type = AlertType[alert_type]
+        disposition = message.data.get("disposition", "pending").upper()
+        if disposition not in AlertState.__members__:
             LOG.error(f"Invalid disposition requested: {disposition}")
             self.bus.emit(message.response({"error": "Invalid disposition"}))
             return
+        else:
+            disposition = AlertState[disposition]
+        
+        matched = self._get_alerts_list(alert_type,
+                                        user,
+                                        disposition)
 
-        to_return = {alert.ident: alert.serialize for alert in matched}
-        self.bus.emit(message.response(to_return))
+        data = {alert.ident: alert.serialize for alert in matched}
+        self.bus.emit(message.response(data))
 
     def _get_alerts_list(self, 
                          alert_type: AlertType,
