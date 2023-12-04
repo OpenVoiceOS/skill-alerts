@@ -44,14 +44,12 @@ from ovos_utils.events import EventSchedulerInterface
 
 from skill_alerts.util import AlertState, AlertType, DAVType, LOCAL_USER
 from skill_alerts.util.alert import Alert, alert_time_in_range, is_alert_type, properties_changed
-from skill_alerts.util.dav_utils import creds_viable, get_dav_items
+from skill_alerts.util.dav_utils import get_dav_items, DAVCredentials
 from skill_alerts.util.parse_utils import get_default_alert_name, has_default_name
 
 SYNC_LOCK = NamedLock("alert_dav_sync")
 
 _ALERTFILE = "alerts.json"
-_DAV_CREDFILE = "dav_credentials.json"
-_DAV_CRED_DEFAULT = {"url": "", "username": "", "password": "", "ssl_verify_cert": ""}
 _SYNC_RESTRICTED = (AlertType.TIMER, AlertType.ALARM, AlertType.UNKNOWN, AlertType.ALL)
 
 
@@ -86,20 +84,6 @@ def get_alerts_by_type(alerts: List[Alert]) -> dict:
         sorted_dict[key].append(alert)
 
     return sorted_dict
-
-
-class DAVCredentials(JsonStorage):
-    def __init__(self, credfile: str, services: list) -> None:
-        super().__init__(credfile)
-        if not os.path.exists(credfile):
-            # prepopulate the credentials file
-            self.init_credentials(services)
-
-    def init_credentials(self, services):
-        for service in services:
-            if not self.get(service, False):
-                self[service] = _DAV_CRED_DEFAULT
-                self.store()
 
 
 class AlertManager:
@@ -203,7 +187,7 @@ class AlertManager:
 
     def init_dav_clients(
         self, services: list, frequency: int, test_connectivity: bool = True
-    ):
+    ) -> Dict[str, List[str]]:
         """
         Creates dav clients from the credential dict specified
         :param services: list of services to initialize
@@ -212,10 +196,14 @@ class AlertManager:
         :returns: errors (dict conataining dialog/services pairs) to be voiced
         """
         client = None
-        _credentials = DAVCredentials(os.path.join(self._home, _DAV_CREDFILE), services)
-        errors = {"dav.credentials.missing": [], "dav.service.cant.connect": []}
+        _credentials = DAVCredentials(self._home, services)
+        errors = {"dav_credentials_missing": [], "dav_service_cant_connect": []}
+        # no DAV clients
+        if _credentials.empty:
+            return errors
+        
         for service in services:
-            if not creds_viable(_credentials[service]):
+            if not _credentials.viable(service):
                 errors["dav_credentials_missing"].append(service)
                 continue
             client = caldav.DAVClient(**_credentials[service])

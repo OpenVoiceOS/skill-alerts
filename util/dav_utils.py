@@ -27,12 +27,14 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime as dt
+import os
 from urllib.parse import urlparse
 from typing import Set, Optional, Union, List
 
 import icalendar
 import caldav
 from dateutil.tz import gettz
+from json_database import JsonStorage
 from ovos_config.locale import get_default_tz
 from ovos_utils.time import to_system
 from ovos_utils.log import LOG
@@ -40,6 +42,8 @@ from ovos_utils.log import LOG
 from skill_alerts.util import AlertType, DAVType
 
 _DAV_DEFAULT_LOOKAHEAD = 365
+_DAV_CREDFILE = "dav_credentials.json"
+_DAV_CRED_DEFAULT = {"url": "", "username": "", "password": "", "ssl_verify_cert": ""}
 
 
 def get_dav_items(calendar: caldav.objects.Calendar, timespan: int = None):
@@ -209,16 +213,33 @@ def _add_relations(events: List[List[tuple]]):
     return alerts
 
 
-def creds_viable(credentials: dict) -> bool:
-    """
-    Helper to determine if the DAV credentials are viable for the caldav login request
-    :param credentials: dict of the credentials
-    :returns: bool
-    """
-    required = ("url", "username", "password")
-    populated = any(credentials[key] != "" for key in required)
-    result = urlparse(credentials["url"])
-    url_viable = all([result.scheme, result.netloc])
-    if not url_viable:
-        LOG.error("DAV URL is not viable")
-    return populated and url_viable
+class DAVCredentials(JsonStorage):
+    def __init__(self, basedir: str, services: list) -> None:
+        credfile = os.path.join(basedir, _DAV_CREDFILE)
+        super().__init__(credfile)
+        if not os.path.exists(credfile):
+            # prepopulate the credentials file
+            self.init_credentials(services)
+
+    def init_credentials(self, services):
+        for service in services:
+            if not self.get(service, False):
+                self[service] = _DAV_CRED_DEFAULT
+                self.store()
+    
+    @property
+    def empty(self):
+        return not any(self.keys())
+    
+    def viable(self, service: str) -> bool:
+        required = ("url", "username", "password")
+        credentials = self.get(service, False)
+        if not credentials:
+            return False
+        
+        populated = any(credentials[key] != "" for key in required)
+        result = urlparse(credentials["url"])
+        url_viable = all([result.scheme, result.netloc])
+        if not url_viable:
+            LOG.error("DAV URL is not viable")
+        return populated and url_viable
