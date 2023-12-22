@@ -113,7 +113,7 @@ class Tokens(list):
         return self
 
 
-def tokenize_utterance(message: Message) -> Tokens[list]:
+def tokenize_utterance(message: Message) -> Tokens:
     """
     Get utterance tokens, split on matched vocab
     :param message: Message associated with intent match
