@@ -15,9 +15,9 @@ from lingua_franca.format import (
 from ovos_config.locale import get_default_lang, load_language
 from lingua_franca.format import nice_duration, expand_options
 
-from skill_alerts.util import AlertType, Weekdays, WEEKDAYS, WEEKENDS, EVERYDAY
-from skill_alerts.util.alert import Alert
-from skill_alerts.util.config import use_24h_format, get_date_format
+from ovos_skill_alerts.util import AlertType, Weekdays, WEEKDAYS, WEEKENDS, EVERYDAY
+from ovos_skill_alerts.util.alert import Alert
+from ovos_skill_alerts.util.config import use_24h_format, get_date_format
 
 
 def datetime_display(begin: dt.datetime,

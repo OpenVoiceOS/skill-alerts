@@ -39,8 +39,8 @@ from ovos_utils.log import LOG
 from ovos_config.locale import get_default_tz
 from ovos_config import Configuration
 
-from skill_alerts.util import AlertType, DAVType, AlertPriority, Weekdays
-from skill_alerts.util.dav_utils import process_ical_event, process_ical_todo
+from ovos_skill_alerts.util import AlertType, DAVType, AlertPriority, Weekdays
+from ovos_skill_alerts.util.dav_utils import process_ical_event, process_ical_todo
 
 LOCAL_USER = "local"
 TZID = Configuration().get("location", {}).get("timezone", {}).get("code") or "UTC"

@@ -39,7 +39,7 @@ from ovos_config.locale import get_default_tz
 from ovos_utils.time import to_system
 from ovos_utils.log import LOG
 
-from skill_alerts.util import AlertType, DAVType
+from ovos_skill_alerts.util import AlertType, DAVType
 
 _DAV_DEFAULT_LOOKAHEAD = 365
 _DAV_CREDFILE = "dav_credentials.json"

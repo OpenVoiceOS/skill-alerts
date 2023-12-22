@@ -31,9 +31,9 @@ from datetime import datetime
 from lingua_franca.format import nice_duration, nice_time
 from ovos_utils.log import LOG
 
-from skill_alerts.util.alert import Alert, AlertType
-from skill_alerts.util.locale import get_abbreviation, translate, datetime_display
-from skill_alerts.util.config import use_24h_format
+from ovos_skill_alerts.util.alert import Alert, AlertType
+from ovos_skill_alerts.util.locale import get_abbreviation, translate, datetime_display
+from ovos_skill_alerts.util.config import use_24h_format
 
 
 def build_gui_data(alert: Alert) -> dict:
