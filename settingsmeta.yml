@@ -4,12 +4,12 @@ skillMetadata:
       fields:
         - name: speak_alarm
           type: checkbox
-          label: Speak alarm notifications (False plays alarm sound)
-          value: "false"
+          label: Speak alarm notifications (unchecked - only plays alarm sound)
+          value: false
         - name: speak_timer
           type: checkbox
-          label: Speak timer notifications (False plays timer sound)
-          value: "true"
+          label: Speak timer notifications (unchecked - only plays timer sound)
+          value: true
         - name: sound_alarm
           type: text
           label: Alarm audio resource file
@@ -21,7 +21,7 @@ skillMetadata:
         - name: quiet_hours
           type: checkbox
           label: Quiet Hours (mutes all notifications until disabled)
-          value: "false"
+          value: false
         - name: snooze_mins
           type: number
           label: Default snooze duration in minutes
@@ -34,3 +34,24 @@ skillMetadata:
           type: number
           label: Default alert priority cutoff
           value: 8
+    - name: CalDAV
+      fields:
+        - name: service_label
+          type: label
+          label: >
+            <p>Which caldav services do you want to use? (comma separated list)
+            The credentials have to be set in the corresponding skill CONFIG folder.
+            (default ~/.config/<mycroft-distribution>/skills/<skill>/dav_credentials.json)
+            Needs skill reload</p>
+        - name: services
+          type: text
+          label: Services
+          value: ""
+        - name: frequency
+          type: number
+          label: Sync frequency (minutes)
+          value: 15
+        - name: sync_ask
+          type: checkbox
+          label: Ask whether to sync alert
+          value: false

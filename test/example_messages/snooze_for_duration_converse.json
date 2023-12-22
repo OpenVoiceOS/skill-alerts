@@ -1,0 +1,32 @@
+{
+  "type": "skill-alerts.neongeckocom:create_timer",
+  "data": {
+    "utterances": [
+      "snooze for 5 minutes"
+    ],
+    "lang": "en-us",
+    "intent_type": "skill-alerts.neongeckocom:create_timer",
+    "create": "start",
+    "timer": "timer",
+    "target": null,
+    "confidence": 0.3111111111111111,
+    "__tags__": [],
+    "utterance": "snooze for 5 minutes"
+  },
+  "context": {
+    "client_name": "mycroft_cli",
+    "source": [
+      "skills"
+    ],
+    "destination": "debug_cli",
+    "client": "local",
+    "neon_should_respond": false,
+    "timing": {
+      "handle_utterance": 1644892024.36015,
+      "transcribed": 1644892024.36015,
+      "save_transcript": 4.0531158447265625e-06,
+      "text_parsers": 1.3828277587890625e-05
+    },
+    "skill_id": "skill-alerts.neongeckocom"
+  }
+}

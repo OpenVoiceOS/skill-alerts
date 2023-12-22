@@ -2,7 +2,7 @@
   "type": "skill-alerts.neongeckocom:create_alarm",
   "data": {
     "utterances": [
-      "neon wake me up at 7 am"
+      "neon wake me up at 7 AM"
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:create_alarm",
@@ -31,7 +31,7 @@
         "from_context": false
       }
     ],
-    "utterance": "neon wake me up at 7 am",
+    "utterance": "neon wake me up at 7 AM",
     "alarm": "wake me up"
   },
   "context": {

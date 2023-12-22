@@ -1,0 +1,96 @@
+{
+    "type": "skill-alerts.neongeckocom:TimerStatus",
+    "data": {
+      "utterances": [
+        "how much time is left on the oven timer"
+      ],
+      "lang": "en-us",
+      "intent_type": "skill-alerts.neongeckocom:TimerStatus",
+      "query": "how much",
+      "time": "time",
+      "remaining": "left",
+      "target": null,
+      "confidence": 0.3111111111111111,
+      "__tags__": [
+        {
+          "match": "how much",
+          "key": "how much",
+          "start_token": 0,
+          "entities": [
+            {
+              "key": "how much",
+              "match": "how much",
+              "data": [
+                [
+                  "how much",
+                  "skill_alerts_neongeckocomcreate"
+                ]
+              ],
+              "confidence": 1.0
+            }
+          ],
+          "end_token": 1,
+          "from_context": false
+        },
+        {
+          "match": "time",
+          "key": "query",
+          "start_token": 2,
+          "entities": [
+            {
+              "key": "query",
+              "match": "time",
+              "data": [
+                [
+                  "time",
+                  "skill_alerts_neongeckocomtime"
+                ]
+              ],
+              "confidence": 1.0
+            }
+          ],
+          "end_token": 2,
+          "from_context": false
+        },
+        {
+          "match": "left",
+          "key": "remaining",
+          "start_token": 4,
+          "entities": [
+            {
+              "key": "remaining",
+              "match": "left",
+              "data": [
+                [
+                  "left",
+                  "skill_alerts_neongeckocomremaining"
+                ]
+              ],
+              "confidence": 1.0
+            }
+          ],
+          "end_token": 4,
+          "from_context": false
+        }
+      ],
+      "utterance": "how much time is left on the oven timer"
+    },
+    "context": {
+      "username": "timer_user",
+      "client_name": "mycroft_cli",
+      "source": [
+        "skills"
+      ],
+      "destination": "debug_cli",
+      "client": "local",
+      "neon_should_respond": false,
+      "timing": {
+        "handle_utterance": 1644892024.36015,
+        "transcribed": 1644892024.36015,
+        "save_transcript": 4.0531158447265625e-06,
+        "text_parsers": 1.3828277587890625e-05
+      },
+      "skill_id": "skill-alerts.neongeckocom"
+    }
+  }
+  

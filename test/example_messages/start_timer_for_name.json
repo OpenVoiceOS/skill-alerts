@@ -6,8 +6,8 @@
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:create_timer",
-    "skill_alerts_neongeckocomset": "start",
-    "skill_alerts_neongeckocomtimer": "timer",
+    "create": "start",
+    "timer": "timer",
     "target": null,
     "confidence": 0.20720720720720723,
     "__tags__": [
@@ -22,7 +22,7 @@
             "data": [
               [
                 "start",
-                "skill_alerts_neongeckocomset"
+                "skill_alerts_neongeckocomcreate"
               ]
             ],
             "confidence": 1.0

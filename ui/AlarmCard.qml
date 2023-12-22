@@ -46,6 +46,7 @@ Mycroft.CardDelegate {
 
                 Kirigami.Icon {
                     id: repeatButtonIcon
+                    visible: sessionData.alarmRepeat ? 1 : 0
                     Layout.preferredWidth: parent.height * 0.8
                     Layout.preferredHeight: width
                     Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
@@ -55,7 +56,7 @@ Mycroft.CardDelegate {
 
                 Label {
                     id: alarmCardRepeatLabel
-                    text: "Repeat"
+                    text: sessionData.alarmRepeatStr
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     maximumLineCount: 1

@@ -1,0 +1,93 @@
+{
+  "type": "skill-alerts.neongeckocom:create_event",
+  "data": {
+    "utterances": [
+      "add halloween event in 2 days spanning 3 hours"
+    ],
+    "lang": "en-us",
+    "intent_type": "skill-alerts.neongeckocom:create_event",
+    "create": "add",
+    "event":"event",
+    "until":"spanning",
+    "target": null,
+    "confidence": 0.13333333333333333,
+    "__tags__": [
+      {
+        "match": "add",
+        "key": "add",
+        "start_token": 0,
+        "entities": [
+          {
+            "key": "add",
+            "match": "add",
+            "data": [
+              [
+                "add",
+                "skill_alerts_neongeckocomcreate"
+              ]
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "end_token": 1,
+        "from_context": false
+      },
+      {
+        "match": "event",
+        "key": "event",
+        "start_token": 0,
+        "entities": [
+          {
+            "key": "event",
+            "match": "event",
+            "data": [
+              [
+                "event",
+                "skill_alerts_neongeckocomevent"
+              ]
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "end_token": 1,
+        "from_context": false
+      },
+      {
+        "match": "spanning",
+        "key": "spanning",
+        "start_token": 0,
+        "entities": [
+          {
+            "key": "spanning",
+            "match": "spanning",
+            "data": [
+              [
+                "spanning",
+                "skill_alerts_neongeckocomuntil"
+              ]
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "end_token": 1,
+        "from_context": false
+      }
+    ],
+    "utterance": "add halloween event in 2 days spanning 3 hours"
+  },
+  "context": {
+    "client_name": "mycroft_cli",
+    "source": [
+      "skills"
+    ],
+    "destination": "debug_cli",
+    "client": "local",
+    "neon_should_respond": false,
+    "timing": {
+      "handle_utterance": 1644970939.6371384,
+      "transcribed": 1644970939.6371384,
+      "save_transcript": 6.67572021484375e-06,
+      "text_parsers": 1.9550323486328125e-05
+    }
+  }
+}

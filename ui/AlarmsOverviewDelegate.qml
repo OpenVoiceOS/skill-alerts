@@ -34,14 +34,66 @@ ItemDelegate {
     }
 
     contentItem: Item {
+        id: alarmCardOverviewLayout
+        anchors.fill: parent
+        anchors.margins: Mycroft.Units.gridUnit + 4
+
+        Rectangle {
+            id: alarmCardColumnOne
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: Mycroft.Units.gridUnit / 4
+            height: parent.height * 0.15
+            color: Kirigami.Theme.backgroundColor
+
+            RowLayout {
+                id: columnOneRowLayout
+                anchors.fill: parent
+
+                Kirigami.Icon {
+                    id: repeatButtonIcon
+                    visible: model.alarmRepeat ? 1 : 0
+                    Layout.preferredWidth: parent.height * 0.8
+                    Layout.preferredHeight: width
+                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                    source: "media-repeat-all"
+                    color: Kirigami.Theme.textColor
+                }
+
+                Label {
+                    id: alarmCardRepeatLabel
+                    text: model.alarmRepeatStr
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    maximumLineCount: 1
+                    horizontalAlignment: Text.AlignLeft
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    minimumPixelSize: 5
+                    font.pixelSize: 42
+                    fontSizeMode: Text.Fit
+                    font.bold: true
+                    color: Kirigami.Theme.textColor
+                }
+            }
+        }
+
+        Kirigami.Separator {
+            id: alarmCardColumnOneSeparator
+            anchors.top: alarmCardColumnOne.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+        }
 
         AlarmBoxView {
-            id: alarmCardColumn
-            anchors.top: parent.top
+            id: alarmCardColumnTwo
+            anchors.top: alarmCardColumnOneSeparator.bottom
             anchors.margins: Mycroft.Units.gridUnit / 4
             anchors.left: parent.left
             anchors.right: parent.right
-            height: parent.height * 0.7
+            height: parent.height * 0.6
             alarmName: model.alarmName
             alarmTime: model.alarmTime
             alarmAmPm: model.alarmAmPm
@@ -49,8 +101,8 @@ ItemDelegate {
         }
 
         Kirigami.Separator {
-            id: alarmCardColumnSeparator
-            anchors.top: alarmCardColumn.bottom
+            id: alarmCardColumnTwoSeparator
+            anchors.top: alarmCardColumnTwo.bottom
             anchors.topMargin: Mycroft.Units.gridUnit / 4
             anchors.left: parent.left
             anchors.right: parent.right
@@ -59,15 +111,16 @@ ItemDelegate {
 
         AlarmButtonView {
             id: alarmCardColumnThree
-            anchors.top: alarmCardColumnSeparator.bottom
+            anchors.top: alarmCardColumnTwoSeparator.bottom
             anchors.left: parent.left
             anchors.right: parent.right
+            anchors.bottom: parent.bottom
             anchors.topMargin: Mycroft.Units.gridUnit / 4
             height: parent.height * 0.27
             alarmName: model.alarmName
             alarmIndex: model.alarmIndex
             alarmContext: "overview"
-            alarmExpired: sessionData.alarmExpired
+            alarmExpired: model.alarmExpired
         }
     }
 }

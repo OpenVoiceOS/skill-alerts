@@ -2,7 +2,7 @@
   "type": "skill-alerts.neongeckocom:create_alarm",
   "data": {
     "utterances": [
-      "wake me up every monday and thursday at 9 am"
+      "wake me up every monday and thursday at 9 AM."
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:create_alarm",
@@ -55,7 +55,7 @@
         "from_context": false
       }
     ],
-    "utterance": "wake me up every monday and thursday at 9 am",
+    "utterance": "wake me up every monday and thursday at 9 AM.",
     "alarm": "wake me up",
     "repeat": "every"
   },

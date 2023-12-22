@@ -6,28 +6,28 @@
     ],
     "lang": "en-us",
     "intent_type": "skill-alerts.neongeckocom:alternate_reminder",
-    "remind_me": "remind me",
+    "remind": "remind",
     "target": null,
     "confidence": 0.13333333333333333,
     "__tags__": [
       {
-        "match": "remind me",
-        "key": "remind me",
+        "match": "remind",
+        "key": "remind",
         "start_token": 0,
         "entities": [
           {
-            "key": "remind me",
-            "match": "remind me",
+            "key": "remind",
+            "match": "remind",
             "data": [
               [
-                "remind me",
-                "skill_alerts_neongeckocomremind_me"
+                "remind",
+                "skill_alerts_neongeckocomremind"
               ]
             ],
             "confidence": 1.0
           }
         ],
-        "end_token": 1,
+        "end_token": 0,
         "from_context": false
       }
     ],

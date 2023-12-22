@@ -1,0 +1,115 @@
+{
+    "type": "skill-alerts.neongeckocom:delete_todo_entries",
+    "data": {
+      "utterances": [
+        "delete all items from the shopping list"
+      ],
+      "lang": "en-us",
+      "intent_type": "skill-alerts.neongeckocom:delete_todo_entries",
+      "delete": "delete",
+      "items": "items",
+      "list": "list",
+      "stored": "all",
+      "target": null,
+      "confidence": 0.275,
+      "__tags__": [
+        {
+          "match": "delete",
+          "key": "delete",
+          "start_token": 0,
+          "entities": [
+            {
+              "key": "delete",
+              "match": "delete",
+              "data": [
+                [
+                  "delete",
+                  "skill_alerts_neongeckocomdelete"
+                ]
+              ],
+              "confidence": 1.0
+            }
+          ],
+          "end_token": 0,
+          "from_context": false
+        },
+        {
+            "match": "all",
+            "key": "stored",
+            "start_token": 1,
+            "entities": [
+              {
+                "key": "stored",
+                "match": "all",
+                "data": [
+                  [
+                    "all",
+                    "skill_alerts_neongeckocomstored"
+                  ]
+                ],
+                "confidence": 1.0
+              }
+            ],
+            "end_token": 1,
+            "from_context": false
+        },
+        {
+            "match": "items",
+            "key": "items",
+            "start_token": 2,
+            "entities": [
+              {
+                "key": "items",
+                "match": "items",
+                "data": [
+                  [
+                    "items",
+                    "skill_alerts_neongeckocomitems"
+                  ]
+                ],
+                "confidence": 1.0
+              }
+            ],
+            "end_token": 2,
+            "from_context": false
+          },
+          {
+            "match": "list",
+            "key": "list",
+            "start_token": 5,
+            "entities": [
+              {
+                "key": "list",
+                "match": "list",
+                "data": [
+                  [
+                    "list",
+                    "skill_alerts_neongeckocomlist"
+                  ]
+                ],
+                "confidence": 1.0
+              }
+            ],
+            "end_token": 5,
+            "from_context": false
+          }
+      ],
+      "utterance": "delete all items from the shopping list"
+    },
+    "context": {
+      "username": "test_user",
+      "client_name": "mycroft_cli",
+      "source": [
+        "skills"
+      ],
+      "destination": "debug_cli",
+      "client": "local",
+      "neon_should_respond": false,
+      "timing": {
+        "handle_utterance": 1644982822.0187464,
+        "transcribed": 1644982822.0187464,
+        "save_transcript": 4.291534423828125e-06,
+        "text_parsers": 1.2874603271484375e-05
+      }
+    }
+  }

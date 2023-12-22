@@ -1,11 +1,11 @@
-dismiss
+dismiss (alert|timer|reminder|alarm|notification|)
 got it
 okay
-cancel
+cancel (alert|timer|reminder|alarm|notification|)
 quiet
-stop
-silence
+stop (alert|timer|reminder|alarm|notification|)
+silence (alert|timer|reminder|alarm|notification|)
 shut up
-clear
+clear (alert|timer|reminder|alarm|notification|)
 end
 exit
