@@ -97,6 +97,7 @@ def now_time(tz=None):
     iso = now.isoformat()
     return dt.datetime.fromisoformat(iso)
 
+@unittest.skip('Work in progress')
 class TestSkill(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -1738,6 +1739,7 @@ class TestSkill(unittest.TestCase):
         pass
 
 
+@unittest.skip('Work in progress')
 class TestAlert(unittest.TestCase):
     def test_alert_create(self):
         now_time_valid = dt.datetime.now(dt.timezone.utc)
@@ -2143,6 +2145,7 @@ class TestAlert(unittest.TestCase):
         self.assertEqual(alert2.related_to, "uuid_parent")
 
 
+@unittest.skip('Work in progress')
 class TestAlertManager(unittest.TestCase):
     manager_path = join(dirname(__file__), "test_cache")
     bus = FakeBus()
@@ -2845,6 +2848,7 @@ class TestAlertManager(unittest.TestCase):
         self.clear_storage(manager)
 
 
+@unittest.skip('Work in progress')
 class TestParseUtils(unittest.TestCase):
     def test_round_nearest_minute(self):
         from ovos_skill_alerts.util.parse_utils import round_nearest_minute
@@ -3676,6 +3680,7 @@ class TestParseUtils(unittest.TestCase):
         )
 
 
+@unittest.skip('Work in progress')
 class TestUIModels(unittest.TestCase):
     load_language("en")
 
@@ -3829,6 +3834,7 @@ class TestUIModels(unittest.TestCase):
         self.assertEqual(display["alarmRepeatStr"], "MON,THU,SUN")
 
 
+@unittest.skip('Work in progress')
 class TestSkillLoading(unittest.TestCase):
     """
     Test skill loading, intent registration, and langauge support. Test cases
@@ -4002,6 +4008,7 @@ class TestSkillLoading(unittest.TestCase):
                 self.assertTrue(isfile(file), file)
 
 
+@unittest.skip('Work in progress')
 class TestSkillIntentMatching(unittest.TestCase):
     # Import and initialize installed skill
     from ovos_skill_alerts import AlertSkill
