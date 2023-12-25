@@ -113,7 +113,7 @@ setup(
     license='BSD-3-Clause',
     install_requires=get_requirements("requirements.txt"),
     author=",".join(AUTHORS),
-    author_email='25036977+emphasize@users.noreply.github.com',
+    author_email='',
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_dir={SKILL_PKG: ""},
