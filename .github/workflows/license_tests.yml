@@ -32,13 +32,13 @@ jobs:
           pip freeze > requirements-all.txt
       - name: Check python
         id: license_check_report
-        uses: pilosus/action-pip-license-checker@v0.5.0
+        uses: pilosus/action-pip-license-checker@v2.0.0
         with:
           requirements: 'requirements-all.txt'
           fail: 'Copyleft,Other,Error'
           fails-only: true
           exclude: '^(caldav|recurring-ical-events|x-wr-timezone).*'
-          exclude-license: '^(Mozilla).*$'
+          exclude-license: '^(Mozilla|NeonAI License v1.0).*$'
       - name: Print report
         if: ${{ always() }}
         run: echo "${{ steps.license_check_report.outputs.report }}"
