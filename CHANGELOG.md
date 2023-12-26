@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/7b2d03a68ec37944171b423a25d339875254a773...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a2...HEAD)
+
+**Merged pull requests:**
+
+- streamline event types [\#6](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/6) ([emphasize](https://github.com/emphasize))
+
+## [V0.0.1a2](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a2) (2023-12-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/7b2d03a68ec37944171b423a25d339875254a773...V0.0.1a2)
 
 **Implemented enhancements:**
 
