@@ -25,7 +25,7 @@ ItemDelegate {
         if (timerViews.count == 1) {
             Mycroft.MycroftController.sendText("cancel all timers")
         }
-        triggerGuiEvent("timerskill.gui.stop.timer", {"timer": modelData})
+        triggerGuiEvent("ovos.alerts.cancel_timer", {"timer": modelData})
     }
 
     background: Rectangle {

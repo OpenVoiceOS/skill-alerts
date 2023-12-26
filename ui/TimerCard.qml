@@ -101,7 +101,7 @@ ItemDelegate {
                     }
 
                     onClicked: {
-                        triggerGuiEvent("timerskill.gui.stop.timer", {"timer": modelData})
+                        triggerGuiEvent("ovos.alerts.cancel_timer", {"timer": modelData})
                     }
                 }
             }
