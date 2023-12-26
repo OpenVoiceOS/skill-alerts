@@ -16,8 +16,8 @@ except ImportError:
     OCP_RUNNNING = False
     pass
 
-from skill_alerts.util.alert import Alert
-from skill_alerts.util.locale import get_words_list, voc_match
+from ovos_skill_alerts.util.alert import Alert
+from ovos_skill_alerts.util.locale import get_words_list, voc_match
 
 
 LANG2MEDIA = {

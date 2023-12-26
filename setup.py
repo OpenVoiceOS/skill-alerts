@@ -29,10 +29,16 @@
 from setuptools import setup
 from os import getenv, path, walk
 
-SKILL_NAME = "skill-alerts"
-SKILL_PKG = SKILL_NAME.replace('-', '_')
-# skill_id=package_name:SkillClass
-PLUGIN_ENTRY_POINT = f'{SKILL_NAME}.openvoiceos={SKILL_PKG}:AlertSkill'
+
+URL = "https://github.com/OpenVoiceOS/ovos-skill-alerts"
+SKILL_CLAZZ = "AlertSkill"
+
+AUTHOR, SKILL_NAME = URL.split(".com/")[-1].split("/")
+ADDITIONAL_AUTHORS = ["Emphasize"]
+AUTHORS = ADDITIONAL_AUTHORS + [AUTHOR]
+
+SKILL_PKG = SKILL_NAME.lower().replace('-', '_')
+PLUGIN_ENTRY_POINT = f'{SKILL_NAME.lower()}.{AUTHOR.lower()}={SKILL_PKG}:{SKILL_CLAZZ}'
 BASE_PATH = path.abspath(path.dirname(__file__))
 
 
@@ -101,13 +107,13 @@ with open("README.md", "r") as f:
 
 
 setup(
-    name=f"ovos-{SKILL_NAME}",
+    name=SKILL_NAME,
     version=get_version(),
-    url=f'https://github.com/OpenVoiceOS/{SKILL_NAME}',
+    url=URL,
     license='BSD-3-Clause',
     install_requires=get_requirements("requirements.txt"),
-    author='Emphasize',
-    author_email='25036977+emphasize@users.noreply.github.com',
+    author=",".join(AUTHORS),
+    author_email='',
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_dir={SKILL_PKG: ""},

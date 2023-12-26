@@ -40,10 +40,10 @@ from lingua_franca.parse import extract_datetime, extract_duration, normalize, e
 from ovos_config.locale import get_default_lang, load_language, get_default_tz
 from rapidfuzz import fuzz
 
-from skill_alerts.util import AlertPriority, Weekdays, AlertType, DAVType, LOCAL_USER
-from skill_alerts.util.alert import Alert
-from skill_alerts.util.config import use_24h_format, find_resource_file, get_date_format
-from skill_alerts.util.locale import (
+from ovos_skill_alerts.util import AlertPriority, Weekdays, AlertType, DAVType, LOCAL_USER
+from ovos_skill_alerts.util.alert import Alert
+from ovos_skill_alerts.util.config import use_24h_format, find_resource_file, get_date_format
+from ovos_skill_alerts.util.locale import (
     voc_match,
     spoken_alert_type,
     get_words_list,
@@ -113,7 +113,7 @@ class Tokens(list):
         return self
 
 
-def tokenize_utterance(message: Message) -> Tokens[list]:
+def tokenize_utterance(message: Message) -> Tokens:
     """
     Get utterance tokens, split on matched vocab
     :param message: Message associated with intent match

@@ -224,10 +224,12 @@ This skill has known intent collisions and replaces:
 - [skill-reminder.mycroftAI](https://github.com/mycroftai/skill-reminder)
 - [skill-alarm.mycroftAI](https://github.com/mycroftai/skill-alarm)
 - [mycroft-timer.mycroftAI](https://github.com/mycroftai/mycroft-timer)
+- [skill-alerts.NeonGeckoCom](https://github.com//skill-alerts)
 
 Be sure to remove them before installing this skill.
 
 ## Contributing Translations
+The skill is for the most part autotranslated (except en/de) and needs to be sanitized.  
 As the examples above show, the skill is using adapt keywords to determine intent. The [vocabulary]() keywords should include a variety of synonym nouns and verbs to satisfy a wide range of speech patterns.  
 
 Dates and names are parsed either as a leftover (ie. non keyword) or following a keyword (eg. `until.voc` _until 6 AM_)

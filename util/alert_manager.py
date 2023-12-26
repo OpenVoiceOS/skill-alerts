@@ -42,10 +42,10 @@ from ovos_utils.time import to_system
 from ovos_utils.log import LOG
 from ovos_utils.events import EventSchedulerInterface
 
-from skill_alerts.util import AlertState, AlertType, DAVType, LOCAL_USER
-from skill_alerts.util.alert import Alert, alert_time_in_range, is_alert_type, properties_changed
-from skill_alerts.util.dav_utils import get_dav_items, DAVCredentials
-from skill_alerts.util.parse_utils import get_default_alert_name, has_default_name
+from ovos_skill_alerts.util import AlertState, AlertType, DAVType, LOCAL_USER
+from ovos_skill_alerts.util.alert import Alert, alert_time_in_range, is_alert_type, properties_changed
+from ovos_skill_alerts.util.dav_utils import get_dav_items, DAVCredentials
+from ovos_skill_alerts.util.parse_utils import get_default_alert_name, has_default_name
 
 SYNC_LOCK = NamedLock("alert_dav_sync")
 
