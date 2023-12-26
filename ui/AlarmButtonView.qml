@@ -72,7 +72,7 @@ Rectangle {
             }
             onClicked: {
                 Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("sounds/clicked.wav"))
-                triggerGuiEvent("ovos.alarm.skill.snooze", {"alarmIndex": alarmIndex, "alarmContext": alarmContext, "alarmName": alarmName})
+                triggerGuiEvent("ovos.alerts.snooze_alarm", {"alarmIndex": alarmIndex, "alarmContext": alarmContext, "alarmName": alarmName})
             }
 
             onPressed: {
@@ -121,7 +121,7 @@ Rectangle {
             }
             onClicked: {
                 Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("sounds/clicked.wav"))
-                triggerGuiEvent("ovos.alarm.skill.cancel", {"alarmIndex": alarmIndex, "alarmContext": alarmContext, "alarmName": alarmName})
+                triggerGuiEvent("ovos.alerts.cancel_alarm", {"alarmIndex": alarmIndex, "alarmContext": alarmContext, "alarmName": alarmName})
             }
 
             onPressed: {

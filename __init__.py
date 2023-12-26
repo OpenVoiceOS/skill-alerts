@@ -243,18 +243,22 @@ class AlertSkill(OVOSSkill):
         else:
             self.add_event("mycroft.ready", self.on_ready, once=True)
 
-        self.add_event("ovos.get_alerts", self._distribute_alerts)
-        self.add_event("alerts.gui.dismiss_notification",
+        self.add_event("ovos.alerts.get_alerts", self._event_get_alerts)
+        self.add_event("ovos.alerts.dismiss_notification",
                        self._gui_dismiss_notification)
         self.add_event("ovos.gui.show.active.timers", self._on_display_gui)
         self.add_event("ovos.gui.show.active.alarms", self._on_display_gui)
 
-        self.gui.register_handler("timerskill.gui.stop.timer",
+        self.gui.register_handler("ovos.alerts.cancel_timer",
                                   self._gui_cancel_timer)
-        self.gui.register_handler("ovos.alarm.skill.cancel",
-                                  self._gui_cancel_alarm)
-        self.gui.register_handler("ovos.alarm.skill.snooze",
-                                  self._gui_snooze_alarm)
+        self.gui.register_handler("ovos.alerts.cancel_alarm",
+                                  self._event_cancel_alarm)
+        self.add_event("ovos.alerts.cancel_alarm",
+                       self._event_cancel_alarm)
+        self.gui.register_handler("ovos.alerts.snooze_alarm",
+                                  self._event_snooze_alarm)
+        self.add_event("ovos.alerts.snooze_alarm",
+                       self._event_snooze_alarm)
 
     def on_ready(self, _: Message):
         """
@@ -1410,7 +1414,7 @@ class AlertSkill(OVOSSkill):
         return alerts[0]
 
     # Static parser methods
-    def _distribute_alerts(self, message):
+    def _event_get_alerts(self, message):
         """
         Handles a request to get scheduled events for a specified
         user and disposition.
@@ -1606,7 +1610,7 @@ class AlertSkill(OVOSSkill):
         LOG.debug(f'add notification: {spoken_type}: {alert.alert_name}')
         self.gui.show_notification(content=f'{spoken_type}: {alert.alert_name}',
                                    duration=duration,
-                                   action='alerts.gui.dismiss_notification',
+                                   action='ovos.alerts.dismiss_notification',
                                    noticetype=noticetype,
                                    callback_data={'alert': alert.data})
 
@@ -1661,12 +1665,17 @@ class AlertSkill(OVOSSkill):
         LOG.debug(("Timers still active on GUI: "
                   f"{self.alert_manager.active_gui_timers}"))
 
-    def _gui_cancel_alarm(self, message: Message):
+    def _event_cancel_alarm(self, message: Message):
         """
-        Handle a gui alarm dismissal
+        Handle a alarm dismissal per event
         """
-        alert_id = message.data.get('alarmIndex')
-        self._dismiss_alert(alert_id, speak=True)     
+        alert_ids = message.data.get('alarmIndex')
+        if alert_ids is None:
+            self.alert_manager.get_active_alerts(alert_type=AlertType.ALARM)
+        elif isinstance(alert_ids, str):
+            alert_ids = [alert_ids]
+        for alert_id in alert_ids:
+            self._dismiss_alert(alert_id, speak=True)     
 
     def _release_gui_alarm(self, alert_id: str):
         alarm = self.alert_manager.get_alert(alert_id)
@@ -1690,19 +1699,23 @@ class AlertSkill(OVOSSkill):
             if alarm.ocp_request:
                 self.bus.emit(Message("system.display.homescreen", {}))
 
-    def _gui_snooze_alarm(self, message):
+    def _event_snooze_alarm(self, message):
         """
-        Handle a gui alarm snooze request
+        Handle a alarm snooze per event
         """
-        alert_id = message.data.get('alarmIndex')
-        LOG.info(f"GUI Snooze alert: {alert_id}")
-        alert = self.alert_manager.get_alert(alert_id)
-                    
-        self._snooze_alert(alert)
-        self.speak_dialog("confirm_snooze_alert",
-                          {"name": alert.alert_name,
-                           "duration": nice_duration(
-                               self.snooze_duration)})
+        alert_ids = message.data.get('alarmIndex')
+        if alert_ids is None:
+            self.alert_manager.get_active_alerts(alert_type=AlertType.ALARM)
+        elif isinstance(alert_ids, str):
+            alert_ids = [alert_ids]
+        for alert_id in alert_ids:
+            alert = self.alert_manager.get_alert(alert_id)
+            LOG.info(f"GUI Snooze alert: {alert_id}")            
+            self._snooze_alert(alert)
+            self.speak_dialog("confirm_snooze_alert",
+                              {"name": alert.alert_name,
+                               "duration": nice_duration(
+                                   self.snooze_duration)}, wait=True)
 
     def _gui_dismiss_notification(self, message):
         if not message.data.get('alert'):
