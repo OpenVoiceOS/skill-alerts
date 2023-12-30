@@ -28,9 +28,8 @@
 
 import time
 import os
-import sys
 from threading import RLock
-from typing import Tuple, List, Optional, Union, Any
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 
 from dateutil.relativedelta import relativedelta
@@ -52,14 +51,12 @@ from ovos_workshop.decorators import intent_handler, killable_intent
 from ovos_utils.sound import play_audio
 from ovos_utils import create_daemon, classproperty
 from ovos_utils.process_utils import RuntimeRequirements
-from ovos_config import get_default_lang
 
 from ovos_skill_alerts.util import Weekdays, AlertState, MatchLevel, AlertPriority, WEEKDAYS, WEEKENDS, EVERYDAY
 from ovos_skill_alerts.util.ui_models import build_gui_data
 from ovos_skill_alerts.util.alert_manager import AlertManager, SYNC_LOCK
 from ovos_skill_alerts.util.alert import Alert, AlertType, DAVType, LOCAL_USER
 from ovos_skill_alerts.util.media import (
-    get_ocp_media_type,
     ocp_query,
     ocp_request,
     get_media_source_from_intent
@@ -216,9 +213,7 @@ class AlertSkill(OVOSSkill):
 
     def initialize(self):
         # merge default settings
-        for k, v in DEFAULT_SETTINGS.items():
-            if k not in self.settings:
-                self.settings[k] = v
+        self.settings.merge(DEFAULT_SETTINGS, new_only=True)
 
         # Initialize manager with any cached alerts
         self._alert_manager = AlertManager(
@@ -1506,8 +1501,8 @@ class AlertSkill(OVOSSkill):
         for alarm in alarms:
             alarms_view.append(build_gui_data(alarm))
         
-        self.gui['activeAlarmCount'] = len(alarms_view)
-        self.gui['activeAlarms'] = alarms_view
+        self.gui['active_alarm_count'] = len(alarms_view)
+        self.gui['active_alarms'] = alarms_view
 
         if any([alarm.is_expired for alarm in alarms]):
             override = True
@@ -1651,7 +1646,7 @@ class AlertSkill(OVOSSkill):
             if timers_to_display:
                 display_data = [build_gui_data(timer)
                                 for timer in timers_to_display]
-                self.gui['activeTimers'] = {'timers': display_data}
+                self.gui['active_timers'] = {'timers': display_data}
             time.sleep(1)
         self._gui_timer_lock.release()
         self.gui.release()
@@ -1660,7 +1655,7 @@ class AlertSkill(OVOSSkill):
         """
         Handle a GUI timer dismissal
         """
-        alert_id = message.data['timer']['alertId']
+        alert_id = message.data['timer']['alert_id']
         self._dismiss_alert(alert_id, speak=True)
         LOG.debug(("Timers still active on GUI: "
                   f"{self.alert_manager.active_gui_timers}"))
@@ -1669,9 +1664,10 @@ class AlertSkill(OVOSSkill):
         """
         Handle a alarm dismissal per event
         """
-        alert_ids = message.data.get('alarmIndex')
+        alert_ids = message.data.get('alert_id')
         if alert_ids is None:
-            self.alert_manager.get_active_alerts(alert_type=AlertType.ALARM)
+            alert_ids = self.alert_manager.get_active_alerts(
+                alert_type=AlertType.ALARM)
         elif isinstance(alert_ids, str):
             alert_ids = [alert_ids]
         for alert_id in alert_ids:
@@ -1679,15 +1675,16 @@ class AlertSkill(OVOSSkill):
 
     def _release_gui_alarm(self, alert_id: str):
         alarm = self.alert_manager.get_alert(alert_id)
-        if self.gui.get('activeAlarms'):
+        active_alarms = self.gui.get('active_alarms')
+        if active_alarms:
             # Multi Alarm view
-            for active in self.gui.get('activeAlarms'):
-                if active.get('alarmIndex') == alert_id:
-                    self.gui['activeAlarms'].remove(active)
+            for alarm in active_alarms:
+                if alarm.get('alert_id') == alert_id:
+                    active_alarms.remove(alarm)
                     break
-            self.gui['activeAlarmCount'] = len(self.gui['activeAlarms'])
+            self.gui['active_alarm_count'] = len(active_alarms)
             # dont release gui on multi alert or timers up
-            if self.gui['activeAlarmCount'] != 0 or \
+            if len(active_alarms) != 0 or \
                     self.alert_manager.active_gui_timers:
                 return
         
@@ -1703,9 +1700,10 @@ class AlertSkill(OVOSSkill):
         """
         Handle a alarm snooze per event
         """
-        alert_ids = message.data.get('alarmIndex')
+        alert_ids = message.data.get('alert_id')
         if alert_ids is None:
-            self.alert_manager.get_active_alerts(alert_type=AlertType.ALARM)
+            alert_ids = self.alert_manager.get_active_alerts(
+                alert_type=AlertType.ALARM)
         elif isinstance(alert_ids, str):
             alert_ids = [alert_ids]
         for alert_id in alert_ids:
