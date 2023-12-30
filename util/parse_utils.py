@@ -218,14 +218,11 @@ def build_alert_from_intent(message: Message) -> Optional[Alert]:
     :param timezone: Timezone for user associated with request
     :returns: Alert extracted from utterance or None if missing required params
     """
+    data = dict(context=dict())
     lang = message.data.get("lang") or get_default_lang()
-    LOG.debug(f"{lang}, {type(lang)}")
-
-    data = dict()
-    data["context"] = parse_alert_context_from_message(message)
-
+    timestamp = message.context.get("timing",
+                                    {}).get("handle_utterance") or time()
     timezone = get_default_tz()
-    timestamp = data.get("context").get("created")
     anchor_time = dt.datetime.fromtimestamp(timestamp).astimezone(timezone)
 
     tokens = tokenize_utterance(message)
@@ -275,6 +272,11 @@ def build_alert_from_intent(message: Message) -> Optional[Alert]:
     data["alert_type"] = alert_type
     if alert_type == AlertType.TODO:
         data["dav_type"] = DAVType.VTODO
+    
+    data["context"].update({
+        "ident": str(uuid4()),
+        "created": timestamp
+    })
 
     return Alert.create(**data)
 
@@ -558,27 +560,6 @@ def parse_alert_name_and_time_from_message(
         parse_alert_time_from_message(message, tokens, timezone, anchor_time),
         parse_alert_name_from_message(message, tokens),
     )
-
-
-def parse_alert_context_from_message(message: Message) -> dict:
-    """
-    Parse the request message context and ensure required parameters exist
-    :param message: Message associated with the request
-    :returns: dict context to include in Alert object
-    """
-    # TODO: what could the rest of message context be good for? {**message.context, **required_context}
-    required_context = {
-        "source": message.context.get("source") or ["skills"],
-        "destination": message.context.get("destination") or "audio",
-        # "session": message.context.get("session") or dict(),
-        "user": message.context.get("user") or LOCAL_USER,
-        "lang": message.data.get("lang") or get_default_lang(),
-        "ident": message.context.get("ident") or str(uuid4()),
-        "origin_ident": message.context.get('ident'),
-        "created": message.context.get("timing",
-                                       {}).get("handle_utterance") or time()
-    }
-    return required_context
 
 
 # TODO: no need for timezone in the signature
