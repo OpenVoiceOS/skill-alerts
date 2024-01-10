@@ -1807,7 +1807,10 @@ class AlertSkill(OVOSSkill):
         timeout = self.alert_timeout_seconds
         max_volume = self.play_volume
         escalate = self.settings.get("escalate_volume")
-        if escalate and not alert.alert_type == AlertType.TIMER:
+        if alert.alert_type == AlertType.TIMER:
+            escalate = False
+
+        if escalate:
             volume = 0.1
             # half of the time play on full loudness, increments of 10% vol
             steps = int(timeout / 2 / ((max_volume - volume) / 0.1))
