@@ -2,7 +2,16 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a2...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a3...HEAD)
+
+**Fixed bugs:**
+
+- Error when trying to play sound when timer finish [\#8](https://github.com/OpenVoiceOS/ovos-skill-alerts/issues/8)
+- fix play media for timer [\#9](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/9) ([emphasize](https://github.com/emphasize))
+
+## [V0.0.1a3](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a3) (2023-12-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a2...V0.0.1a3)
 
 **Merged pull requests:**
 
