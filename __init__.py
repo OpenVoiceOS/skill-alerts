@@ -1788,10 +1788,12 @@ class AlertSkill(OVOSSkill):
         else:
             self._speak_notify_expired(alert)
 
-        # ocp alerts kept active until conversed (snooze/dismiss)
+        # ocp alerts/timer kept active until conversed (snooze/dismiss)
         # (or handled per GUI)
-        if self.alert_manager.get_alert_status(alert.ident) == AlertState.ACTIVE \
-                and not alert.ocp_request:  # and alert.media is None
+        if alert.ocp_request or alert.alert_type == AlertType.TIMER:
+            return
+        
+        if self.alert_manager.get_alert_status(alert.ident) == AlertState.ACTIVE:
             self.alert_manager.mark_alert_missed(alert.ident)
 
     def _play_notify_expired(self, alert: Alert):
@@ -1873,8 +1875,7 @@ class AlertSkill(OVOSSkill):
 
         LOG.debug(f"notify alert expired: {alert.ident}")
 
-        # register with notification system
-        self._create_homescreen_notification(alert, self.alert_timeout_seconds)
+        self._display_expiration(alert)
 
         # Notify user until they dismiss the alert
         timeout = time.time() + self.alert_timeout_seconds
