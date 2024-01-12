@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a4...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a5...HEAD)
+
+**Merged pull requests:**
+
+- Update imports [\#10](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/10) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.1a5](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a5) (2024-01-12)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a4...V0.0.1a5)
 
 **Merged pull requests:**
 
