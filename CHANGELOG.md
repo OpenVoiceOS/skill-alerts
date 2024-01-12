@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a3...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a4...HEAD)
+
+**Merged pull requests:**
+
+- fix timer behaviour [\#11](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/11) ([emphasize](https://github.com/emphasize))
+
+## [V0.0.1a4](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a4) (2024-01-10)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a3...V0.0.1a4)
 
 **Fixed bugs:**
 
