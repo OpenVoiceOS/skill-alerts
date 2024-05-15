@@ -1,0 +1,406 @@
+{
+    "/vocab/cancel.voc": [
+        "descarte",
+        "borrar",
+        "eliminar",
+        "cancelar"
+    ],
+    "/vocab/todo.voc": [
+        "nota",
+        "notas",
+        "hacer",
+        "memo",
+        "memos",
+        "todos",
+        "todo"
+    ],
+    "/vocab/alert.voc": [
+        "alertas",
+        "alerta"
+    ],
+    "/vocab/calendar.voc": [
+        "calendarios",
+        "calendario"
+    ],
+    "/vocab/no.voc": [
+        "negativo",
+        "nope",
+        "no",
+        "nah"
+    ],
+    "/vocab/days.voc": [
+        "viernes",
+        "s\u00e1bado",
+        "jueves",
+        "mi\u00e9rcoles",
+        "domingos",
+        "martes",
+        "lunes",
+        "domingo",
+        "s\u00e1bados"
+    ],
+    "/vocab/create.voc": [
+        "a\u00f1ada",
+        "Tengo",
+        "escriba a",
+        "crear",
+        "iniciar",
+        "nuevo",
+        "configure",
+        "horario"
+    ],
+    "/vocab/everyday.voc": [
+        "todos los d\u00edas",
+        "cada noche",
+        "por la noche",
+        "cada ma\u00f1ana",
+        "todas las noches",
+        "todas las tardes",
+        "diario"
+    ],
+    "/vocab/timer.voc": [
+        "temporizadores",
+        "temporizador"
+    ],
+    "/vocab/choice.voc": [
+        "disponible",
+        "elija",
+        "elecci\u00f3n"
+    ],
+    "/vocab/change.voc": [
+        "ajustar",
+        "mover",
+        "reprogramar",
+        "turno",
+        "cambiar",
+        "aplazar",
+        "posponer",
+        "suspender",
+        "ampliar",
+        "pulse"
+    ],
+    "/vocab/and.voc": [
+        "y"
+    ],
+    "/vocab/snooze.voc": [
+        "snooze until",
+        "d\u00e9jame dormir otra",
+        "d\u00e9jame dormitar hasta",
+        "a\u00f1ada",
+        "d\u00e9jame dormir por",
+        "mantenga",
+        "d\u00e9jame dormitar por",
+        "recu\u00e9rdamelo en",
+        "d\u00e9jame dormir hasta",
+        "d\u00e9jame echar otra cabezadita",
+        "recu\u00e9rdame en",
+        "recu\u00e9rdame",
+        "espere",
+        "a\u00f1adir otro",
+        "snooze",
+        "snooze para",
+        "m\u00e1s tarde",
+        "d\u00e9jame dormir"
+    ],
+    "/vocab/weekdays.voc": [
+        "entre semana",
+        "d\u00eda de la semana",
+        "d\u00edas de la semana"
+    ],
+    "/vocab/reminder.voc": [
+        "recordatorio",
+        "recordatorios"
+    ],
+    "/vocab/priority.voc": [
+        "prioridad",
+        "nivel de prioridad"
+    ],
+    "/vocab/wake.voc": [
+        "despi\u00e9rtanos",
+        "despi\u00e9rtame",
+        "despertar"
+    ],
+    "/vocab/stored.voc": [
+        "tienda",
+        "elecci\u00f3n",
+        "pr\u00f3ximo",
+        "pendiente",
+        "guardado",
+        "guardar",
+        "almacenado",
+        "cada",
+        "todos",
+        "configure",
+        "todo",
+        "escrito"
+    ],
+    "/vocab/query.voc": [
+        "Tengo",
+        "qu\u00e9",
+        "de lo que",
+        "Mostrar",
+        "lista",
+        "de cuando",
+        "dinos",
+        "c\u00f3mo",
+        "\u00bfqu\u00e9 son",
+        "\u00bftengo",
+        "\u00bflo hiciste?",
+        "existe",
+        "lo hicimos",
+        "cuando",
+        "cu\u00e1nto",
+        "tener i",
+        "\u00bflo haces?",
+        "actualizar",
+        "\u00bftienes",
+        "hice yo",
+        "\u00bfhas",
+        "qu\u00e9 es",
+        "algo",
+        "cualquier cosa",
+        "existen",
+        "leer",
+        "dime",
+        "hago yo",
+        "de la cual",
+        "\u00bftenemos",
+        "lo hacemos",
+        "que"
+    ],
+    "/vocab/later.voc": [
+        "aumentar",
+        "adicional",
+        "y",
+        "m\u00e1s largo",
+        "ampliar"
+    ],
+    "/vocab/miss.voc": [
+        "echaba de menos",
+        "miss"
+    ],
+    "/vocab/list.voc": [
+        "enumera",
+        "tarjeta",
+        "lista",
+        "tarjetas"
+    ],
+    "/vocab/media.voc": [
+        "noticias",
+        "audio",
+        "v\u00eddeo",
+        "m\u00fasica",
+        "radio",
+        "podcast",
+        "audiolibro"
+    ],
+    "/vocab/all_day.voc": [
+        "todo el d\u00eda",
+        "jornada completa"
+    ],
+    "/vocab/remind.voc": [
+        "dile a",
+        "memoria",
+        "recuerde"
+    ],
+    "/vocab/delete.voc": [
+        "descarte",
+        "rayar",
+        "eliminar",
+        "pop",
+        "borrar",
+        "drop"
+    ],
+    "/vocab/time.voc": [
+        "tiempo"
+    ],
+    "/vocab/synchronize.voc": [
+        "carga",
+        "descargar",
+        "Sincronizar",
+        "sincronizar",
+        "sincronizado",
+        "cargar"
+    ],
+    "/vocab/items.voc": [
+        "objeto",
+        "entradas",
+        "entrada",
+        "art\u00edculos",
+        "objetos",
+        "art\u00edculo",
+        "cosas",
+        "cosa"
+    ],
+    "/vocab/remaining.voc": [
+        "termina",
+        "listo",
+        "fin",
+        "hecho",
+        "estado",
+        "izquierda",
+        "largo"
+    ],
+    "/vocab/event.voc": [
+        "citas",
+        "eventos",
+        "cita",
+        "evento"
+    ],
+    "/vocab/until.voc": [
+        "longitud",
+        "hasta",
+        "con una duraci\u00f3n de",
+        "duraci\u00f3n del evento",
+        "duraci\u00f3n",
+        "con longitud",
+        "con duraci\u00f3n",
+        "spanning",
+        "para el pr\u00f3ximo"
+    ],
+    "/vocab/question.voc": [
+        "deber\u00edas",
+        "\u00bfquieres",
+        "\u00bfpodr\u00edas"
+    ],
+    "/vocab/earlier.voc": [
+        "corto",
+        "disminuir",
+        "antes",
+        "menos",
+        "acortar"
+    ],
+    "/vocab/repeat.voc": [
+        "repetici\u00f3n a",
+        "recurrencia a cada",
+        "repetici\u00f3n a cada",
+        "recurrencia cada",
+        "repetici\u00f3n",
+        "repetir a cada",
+        "frecuencia cada",
+        "repitiendo cada",
+        "recurrente cada",
+        "recurrente",
+        "recurrencia",
+        "frecuencia",
+        "repitiendo",
+        "repita",
+        "cada",
+        "recurrencia a",
+        "frecuencia a",
+        "frecuencia a cada",
+        "repetici\u00f3n cada",
+        "repetir cada",
+        "repetir a"
+    ],
+    "/vocab/noise_words.voc": [
+        "ellos",
+        "qu\u00e9",
+        "para",
+        "y",
+        "o",
+        "se",
+        "me",
+        "un",
+        "c\u00f3mo",
+        "por qu\u00e9",
+        "tambi\u00e9n",
+        "cuando",
+        "demasiado",
+        "es",
+        "llamado",
+        "nombre",
+        "qu\u00e9 es",
+        "d\u00f3nde est\u00e1",
+        "son",
+        "pero",
+        "por",
+        "soy",
+        "ne\u00f3n",
+        "it",
+        "donde",
+        "en",
+        "el",
+        "con",
+        "mi",
+        "de",
+        "hizo",
+        "a",
+        "que",
+        "do"
+    ],
+    "/vocab/put.voc": [
+        "no",
+        "No",
+        "gire a",
+        "poner",
+        "iniciar"
+    ],
+    "/vocab/next.voc": [
+        "siguiente"
+    ],
+    "/vocab/playable.voc": [
+        "reproducci\u00f3n",
+        "audio",
+        "hablable",
+        "reproducir",
+        "grabaci\u00f3n",
+        "audible",
+        "grabado",
+        "jugable",
+        "voz"
+    ],
+    "/vocab/weekends.voc": [
+        "fines de semana",
+        "fin de semana"
+    ],
+    "/vocab/dismiss.voc": [
+        "silenciar la alarma",
+        "alerta clara",
+        "cancelar temporizador",
+        "stop",
+        "cancelar alerta",
+        "notificaci\u00f3n de parada",
+        "cancelar",
+        "temporizador de silencio",
+        "notificaci\u00f3n clara",
+        "temporizador de parada",
+        "borrar alarma",
+        "detener alarma",
+        "cancelar recordatorio",
+        "recordatorio claro",
+        "notificaci\u00f3n de despido",
+        "cancelar notificaci\u00f3n",
+        "despedir temporizador",
+        "tranquilo",
+        "lo tengo",
+        "c\u00e1llate",
+        "desactivar la alarma",
+        "recordatorio de silencio",
+        "borrar temporizador",
+        "ok",
+        "desactivar la alerta",
+        "recordatorio de parada",
+        "desestimar",
+        "despedir recordatorio",
+        "salida",
+        "fin",
+        "alerta de parada",
+        "silencio",
+        "notificaci\u00f3n de silencio",
+        "borrar",
+        "cancelar alarma",
+        "alerta de silencio"
+    ],
+    "/vocab/alarm.voc": [
+        "alarmas",
+        "despi\u00e9rtame",
+        "alarma"
+    ],
+    "/vocab/script.voc": [
+        "rutina",
+        "script",
+        "archivo",
+        "fichero de competencias"
+    ]
+}

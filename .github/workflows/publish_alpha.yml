@@ -12,6 +12,7 @@ on:
       - 'MANIFEST.in'
       - 'README.md'
       - 'scripts/**'
+      - 'translations/**'
   workflow_dispatch:
 
 jobs:
