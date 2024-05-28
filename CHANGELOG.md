@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/HEAD)
+## [V0.0.1a6](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a6) (2024-01-12)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a5...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a5...V0.0.1a6)
 
 **Merged pull requests:**
 
