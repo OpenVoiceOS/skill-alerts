@@ -1,5 +1,9 @@
 # Changelog
 
+## [V0.0.1a7](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a7) (2024-05-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a6...V0.0.1a7)
+
 ## [V0.0.1a6](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a6) (2024-01-12)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a5...V0.0.1a6)
