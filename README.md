@@ -2,7 +2,7 @@
   
 ## Summary  
   
-A skill to manage alarms, timers, reminders, events and todos and optionally sync them with a CalDAV service.
+An [OpenVoiceOS](https://openvoiceos.github.io/community-docs/000-index/) skill to manage alarms, timers, reminders, events and todos and optionally sync them with a CalDAV service.
 
 
 ## Description  
@@ -217,8 +217,7 @@ _This is a known issue and will be fixed in the next release. It's a problem wit
 
 ## Recommended Versions
 These aren't hard requirements as preferences may vary, but recommended
-GUI: `skill-ovos-homescreen >= 0.0.3a6` (There is also a [PR](https://github.com/OpenVoiceOS/skill-ovos-homescreen/pull/92) pending)
-
+GUI: `skill-ovos-homescreen >= 0.0.3a11`
 ## Incompatible Skills
 This skill has known intent collisions and replaces:
 - [skill-reminder.mycroftAI](https://github.com/mycroftai/skill-reminder)
