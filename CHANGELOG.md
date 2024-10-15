@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2a3](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.2a3) (2024-10-15)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.2a1...0.1.2a3)
+
+**Merged pull requests:**
+
+- Add Catalan translation [\#13](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/13) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
+- Add Catalan translation [\#12](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/12) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
+
 ## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.2a1) (2024-10-15)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1...0.1.2a1)
