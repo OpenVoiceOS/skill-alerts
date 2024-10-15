@@ -1,53 +1,13 @@
 # Changelog
 
-## [V0.0.1a7](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a7) (2024-05-28)
+## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.2a1) (2024-10-15)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a6...V0.0.1a7)
-
-## [V0.0.1a6](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a6) (2024-01-12)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a5...V0.0.1a6)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1...0.1.2a1)
 
 **Merged pull requests:**
 
-- Update imports [\#10](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/10) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.1a5](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a5) (2024-01-12)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a4...V0.0.1a5)
-
-**Merged pull requests:**
-
-- fix timer behaviour [\#11](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/11) ([emphasize](https://github.com/emphasize))
-
-## [V0.0.1a4](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a4) (2024-01-10)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a3...V0.0.1a4)
-
-**Fixed bugs:**
-
-- Error when trying to play sound when timer finish [\#8](https://github.com/OpenVoiceOS/ovos-skill-alerts/issues/8)
-- fix play media for timer [\#9](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/9) ([emphasize](https://github.com/emphasize))
-
-## [V0.0.1a3](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a3) (2023-12-26)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1a2...V0.0.1a3)
-
-**Merged pull requests:**
-
-- streamline event types [\#6](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/6) ([emphasize](https://github.com/emphasize))
-
-## [V0.0.1a2](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/V0.0.1a2) (2023-12-26)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/7b2d03a68ec37944171b423a25d339875254a773...V0.0.1a2)
-
-**Implemented enhancements:**
-
-- feat DAV and skill rework [\#4](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/4) ([emphasize](https://github.com/emphasize))
-
-**Merged pull requests:**
-
-- Fix/workflow setup [\#5](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/5) ([emphasize](https://github.com/emphasize))
+- fix:long description [\#15](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/15) ([JarbasAl](https://github.com/JarbasAl))
+- fix:update\_requirements [\#14](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/14) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
