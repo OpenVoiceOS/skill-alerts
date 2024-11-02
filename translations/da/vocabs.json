@@ -1,0 +1,387 @@
+{
+  "/vocab/cancel.voc": [
+    "afbryd",
+    "fjern",
+    "slet",
+    "kasser",
+    "slet"
+  ],
+  "/vocab/todo.voc": [
+    "todo",
+    "at gøre",
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/alert.voc": [
+    "alarm",
+    null
+  ],
+  "/vocab/calendar.voc": [
+    null,
+    null
+  ],
+  "/vocab/no.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/days.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/create.voc": [
+    null,
+    null,
+    "lav",
+    "lav",
+    "start",
+    null,
+    null,
+    "tilføj"
+  ],
+  "/vocab/everyday.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/timer.voc": [
+    null,
+    null
+  ],
+  "/vocab/choice.voc": [
+    "vælg",
+    null,
+    null
+  ],
+  "/vocab/change.voc": [
+    "omplanlæg",
+    null,
+    "udsæt",
+    "flyt",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/and.voc": [
+    null
+  ],
+  "/vocab/snooze.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/weekdays.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/reminder.voc": [
+    null,
+    null
+  ],
+  "/vocab/priority.voc": [
+    null,
+    null
+  ],
+  "/vocab/wake.voc": [
+    null
+  ],
+  "/vocab/stored.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/query.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/later.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/miss.voc": [
+    null,
+    null
+  ],
+  "/vocab/list.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/media.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/all_day.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/remind.voc": [
+    null,
+    null,
+    null
+  ],
+  "/vocab/delete.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/time.voc": [
+    null
+  ],
+  "/vocab/synchronize.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/items.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/remaining.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/event.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/until.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/question.voc": [
+    null,
+    null,
+    null
+  ],
+  "/vocab/earlier.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/repeat.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/noise_words.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/put.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/next.voc": [
+    null
+  ],
+  "/vocab/playable.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/weekends.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/dismiss.voc": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/alarm.voc": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "/vocab/script.voc": [
+    null,
+    null,
+    null,
+    null
+  ]
+}
