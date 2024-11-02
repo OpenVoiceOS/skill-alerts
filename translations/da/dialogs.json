@@ -6,7 +6,7 @@
     "Medieafspilleren kører ikke."
   ],
   "/dialog/in_time.dialog": [
-    null
+    "i {remaining}"
   ],
   "/dialog/dav_service_cant_connect.dialog": [
     "Kan ikke oprette forbindelse til tjenesten {service}"
@@ -57,7 +57,7 @@
     "Dit {name} afspilles ved {begin}, hver {repeat}."
   ],
   "/dialog/repeating_every.dialog": [
-    null
+    "hver {repeat}"
   ],
   "/dialog/list_alert_timeframe_intro.dialog": [
     "I denne tidsramme har du {num} {type}:"
@@ -75,7 +75,7 @@
     "Jeg vil gerne minde dig om {remimder} om {time_until}"
   ],
   "/dialog/timer_status.dialog": [
-    null
+    "Timeren {name} har {remaining} tilbage."
   ],
   "/dialog/confirm_todo_set.dialog": [
     "Indlægget er placeret."
@@ -94,13 +94,13 @@
     "jeg har intet gemt på nuværende tidspunkt.  "
   ],
   "/dialog/at_time.dialog": [
-    null
+    "{begin}"
   ],
   "/dialog/list_todo_reminder.dialog": [
     "jeg skal minde dig om at {reminders}"
   ],
   "/dialog/dav_calendar_list.dialog": [
-    null,
+    "På tjenesten {service} er der {calendars}.",
     "{calendars} på {service}."
   ],
   "/dialog/next_alert.dialog": [
@@ -290,7 +290,7 @@
     "video"
   ],
   "/dialog/words/event.dialog": [
-    null
+    "event"
   ],
   "/dialog/words/audiobook.dialog": [
     "lydbog"
@@ -299,19 +299,19 @@
     "podcast"
   ],
   "/dialog/words/abbreviation_saturday.dialog": [
-    null
+    "LØR"
   ],
   "/dialog/words/abbreviation_sunday.dialog": [
-    null
+    "SØN"
   ],
   "/dialog/words/todo.dialog": [
-    null
+    "todo"
   ],
   "/dialog/words/weekend.dialog": [
     "Lørdag og søndag"
   ],
   "/dialog/words/abbreviation_thursday.dialog": [
-    null
+    "TOR"
   ],
   "/dialog/words/weekday.dialog": [
     "mandag til fredag"
@@ -344,9 +344,9 @@
     "fredag"
   ],
   "/dialog/words/once.dialog": [
-    null
+    "en gang"
   ],
   "/dialog/words/abbreviation_wednesday.dialog": [
-    null
+    "ONS"
   ]
 }
