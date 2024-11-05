@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.5a1) (2024-11-05)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.4a1...0.1.5a1)
+
+**Merged pull requests:**
+
+- fix: gui resources path [\#22](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/22) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.1.4a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.4a1) (2024-11-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.3...0.1.4a1)
