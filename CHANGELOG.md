@@ -1,22 +1,20 @@
 # Changelog
 
-## [0.1.2a3](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.2a3) (2024-10-15)
+## [0.1.5a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.5a1) (2024-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.2a1...0.1.2a3)
-
-**Merged pull requests:**
-
-- Add Catalan translation [\#13](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/13) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
-- Add Catalan translation [\#12](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/12) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
-
-## [0.1.2a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.2a1) (2024-10-15)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/V0.0.1...0.1.2a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.4a1...0.1.5a1)
 
 **Merged pull requests:**
 
-- fix:long description [\#15](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/15) ([JarbasAl](https://github.com/JarbasAl))
-- fix:update\_requirements [\#14](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/14) ([JarbasAl](https://github.com/JarbasAl))
+- fix: gui resources path [\#22](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/22) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.1.4a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.4a1) (2024-11-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.3...0.1.4a1)
+
+**Merged pull requests:**
+
+- da-dk/translate [\#19](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/19) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
 
 
 
