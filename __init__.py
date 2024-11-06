@@ -698,11 +698,11 @@ class AlertSkill(OVOSSkill):
                 if data["name"]:
                     dialog = f"{data['name']} -"
                 if "repeat" in data:
-                    dialog = f"{dialog} {self.translate('repeating_every', data)}"
+                    dialog = f"{dialog} {self.resources.render_dialog('repeating_every', data)}"
                 if alert_type == AlertType.TIMER:
-                    dialog = f"{dialog} {self.translate('in_time', data)}\n"
+                    dialog = f"{dialog} {self.resources.render_dialog('in_time', data)}\n"
                 else:
-                    dialog = f"{dialog} {self.translate('at_time', data)}\n"
+                    dialog = f"{dialog} {self.resources.render_dialog('at_time', data)}\n"
 
                 self.speak(dialog, wait=True)
             # short break in between different alert types
