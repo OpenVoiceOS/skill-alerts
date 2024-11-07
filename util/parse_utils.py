@@ -28,18 +28,14 @@
 
 import datetime as dt
 from time import time
-from uuid import uuid4
 from typing import Optional, List, Union, Tuple, Any
+from uuid import uuid4
 
 from dateutil.relativedelta import relativedelta
-from ovos_utils.log import LOG
-from ovos_bus_client import Message, MessageBusClient
+from ovos_bus_client import Message
+from ovos_config.locale import get_default_lang, load_language, get_default_tz
 from ovos_date_parser import nice_time, nice_day, extract_datetime, extract_duration
 from ovos_number_parser import extract_number
-from ovos_config.locale import get_default_lang, load_language, get_default_tz
-from rapidfuzz import fuzz
-
-from ovos_utterance_normalizer import UtteranceNormalizerPlugin
 from ovos_skill_alerts.util import AlertPriority, Weekdays, AlertType, DAVType, LOCAL_USER
 from ovos_skill_alerts.util.alert import Alert
 from ovos_skill_alerts.util.config import use_24h_format, find_resource_file, get_date_format
@@ -50,6 +46,9 @@ from ovos_skill_alerts.util.locale import (
     spoken_duration,
     get_alert_type
 )
+from ovos_utils.log import LOG
+from ovos_utterance_normalizer import UtteranceNormalizerPlugin
+from rapidfuzz import fuzz
 
 
 class Tokens(list):
@@ -138,7 +137,6 @@ def tokenize_utterance(message: Message) -> Tokens:
             parsed = parsed.strip("-")
             chunks.extend((parsed, word))
         chunks.append(utterance)
-
     normalizer = UtteranceNormalizerPlugin.get_normalizer(lang=lang)
     tokens = Tokens([normalizer.normalize(chunk).lower()
                      for chunk in chunks if chunk.strip()], message)
@@ -751,61 +749,3 @@ def fuzzy_match_alerts(test: List[Alert], against: str, confidence: int = None) 
     if result:
         return sorted(result, key=lambda x:x[1])[-1][0]
     return None
-
-
-def _get_and_word(lang):
-    """ Helper to get word translations
-
-    Args:
-        lang (str, optional): an optional BCP-47 language code, if omitted
-                              the default language will be used.
-
-    Returns:
-        str: translated version of resource name
-    """
-    mapp = {
-        "az": "və",
-        "ca": "i",
-        "cs": "a",
-        "da": "og",
-        "de": "und",
-        "en": "and",
-        "fa": "و",
-        "pl": "oraz",
-        "pt": "e",
-        "sl": "in",
-        "uk": "та"
-    }
-    return mapp.get(lang.split("-")[0]) or ", "
-
-
-def join_list(items: List[str], connector: str, sep: Optional[str] = None,
-              lang: str = '') -> str:
-    """ Join a list into a phrase using the given connector word
-
-    Examples:
-        join_list([1,2,3], "and") ->  "1, 2 and 3"
-        join_list([1,2,3], "and", ";") ->  "1; 2 and 3"
-
-    Args:
-        items (array): items to be joined
-        connector (str): connecting word (resource name), like "and" or "or"
-        sep (str, optional): separator character, default = ","
-        lang (str, optional): an optional BCP-47 language code, if omitted
-                              the default language will be used.
-    Returns:
-        str: the connected list phrase
-    """
-
-    if not items:
-        return ""
-    if len(items) == 1:
-        return str(items[0])
-
-    if not sep:
-        sep = ", "
-    else:
-        sep += " "
-    return (sep.join(str(item) for item in items[:-1]) +
-            " " + _get_and_word(lang) +
-            " " + items[-1])
