@@ -37,7 +37,6 @@ from ovos_bus_client.message import Message
 from ovos_date_parser import nice_date_time, nice_time, nice_duration
 from ovos_number_parser import pronounce_number
 from ovos_skill_alerts.util import AlertState, MatchLevel, AlertPriority, WEEKDAYS
-from ovos_skill_alerts.util.misc import join_list
 from ovos_skill_alerts.util.alert import Alert, AlertType, DAVType, LOCAL_USER
 from ovos_skill_alerts.util.alert_manager import AlertManager, SYNC_LOCK
 from ovos_skill_alerts.util.config import use_24h_format, get_default_tz, DEFAULT_SETTINGS
@@ -84,6 +83,7 @@ from ovos_utterance_normalizer import UtteranceNormalizerPlugin
 from ovos_workshop.decorators import intent_handler
 from ovos_workshop.intents import IntentBuilder
 from ovos_workshop.skills import OVOSSkill
+from ovos_workshop.skills.ovos import join_word_list
 
 
 class AlertSkill(OVOSSkill):
@@ -273,8 +273,8 @@ class AlertSkill(OVOSSkill):
                 for dialog, services in errors.items():
                     if services:
                         self.speak_dialog(dialog,
-                                          {"services": join_list(services,
-                                                                 "and")})
+                                          {"services": join_word_list(services,
+                                                                 connector="and", sep=",", lang=self.lang)})
                 self.dav_services = dav_services
                 self.sync_frequency = sync_frequency
 
@@ -409,8 +409,8 @@ class AlertSkill(OVOSSkill):
                                                        alert_type)
 
         if overlapping:
-            dialog_data = {"event": join_list([r.alert_name
-                                               for r in overlapping], "and")}
+            dialog_data = {"event": join_word_list([r.alert_name
+                                               for r in overlapping], connector="and", sep=",", lang=self.lang)}
             end = [a.until for a in overlapping if a.until]
             if end:
                 dialog_data["begin"] = nice_time(min([a.expiration
@@ -418,8 +418,8 @@ class AlertSkill(OVOSSkill):
                 dialog_data["end"] = nice_time(max(end))
                 dialog = "alert_overlapping_duration_ask"
             else:
-                dialog_data["begin"] = join_list([nice_time(a.expiration)
-                                                  for a in overlapping], "and")
+                dialog_data["begin"] = join_word_list([nice_time(a.expiration)
+                                                  for a in overlapping], connector="and", sep=",", lang=self.lang)
                 dialog = "alert_overlapping_ask"
 
             if self.ask_yesno(dialog, dialog_data) in (
@@ -910,7 +910,7 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog(
                 "list_todo_lists",
                 {"num": pronounce_number(len(names)),
-                 "lists": join_list(names, "and")},
+                 "lists": join_word_list(names, connector="and", sep=",", lang=self.lang)},
             )
         else:
             self.speak_dialog("list_todo_no_lists")
@@ -932,7 +932,8 @@ class AlertSkill(OVOSSkill):
                 self._display_list(todos)
             self.speak_dialog(
                 "list_todo_reminder",
-                {"reminders": join_list([todo.alert_name for todo in todos], "and")},
+                {"reminders": join_word_list([todo.alert_name for todo in todos],
+                                             connector="and", sep=",", lang=self.lang)},
             )
         else:
             self.speak_dialog("list_todo_no_reminder")
@@ -958,8 +959,8 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog(
                 "list_todo_subitems",
                 {"name": alert.alert_name,
-                 "items": join_list([alert.alert_name for alert in list_entries],
-                                    "and", lang=self.lang)},
+                 "items": join_word_list([alert.alert_name for alert in list_entries],
+                                    connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
         else:
@@ -1053,8 +1054,8 @@ class AlertSkill(OVOSSkill):
             self._display_alerts(AlertType.TODO, todos)
             self.speak_dialog(
                 "list_todo_subitems",
-                {"items": join_list([todo.alert_name for todo in todos],
-                                    "and", lang=self.lang)},
+                {"items": join_word_list([todo.alert_name for todo in todos],
+                                    connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
             time.sleep(2)
@@ -1093,7 +1094,8 @@ class AlertSkill(OVOSSkill):
         for service, calendars in calendars.items():
             self.speak_dialog(
                 "dav_calendar_list",
-                data={"service": service, "calendars": join_list(calendars, "and")},
+                data={"service": service, "calendars": join_word_list(calendars,
+                                                                      connector="and", sep=",", lang=self.lang)},
             )
 
     @intent_handler(
@@ -1172,8 +1174,9 @@ class AlertSkill(OVOSSkill):
         elif alert.repeat_days == WEEKDAYS:
             repeat_interval = translate("weekday", self.lang)
         else:
-            repeat_interval = join_list([spoken_weekday(day, self.lang)
-                                         for day in alert.repeat_days], "and")
+            repeat_interval = join_word_list([spoken_weekday(day, self.lang)
+                                         for day in alert.repeat_days],
+                                        connector="and", sep=",", lang=self.lang)
 
         # Notify repeating alert
         if alert.audio_file:
@@ -1395,7 +1398,7 @@ class AlertSkill(OVOSSkill):
                     {nice_date_time(alert.expiration, use_24hour=self.use_24hour, use_ampm=not self.use_24hour)}"
                 for i, alert in enumerate(alerts)
             ]
-            self.speak(join_list(spoken_list, "and"), wait=True)
+            self.speak(join_word_list(spoken_list, connector="and", sep=",", lang=self.lang), wait=True)
             idx = self.get_response("alert_list_choose_between",
                                     validator=validate_number,
                                     data=dict(length=len(spoken_list)))
