@@ -1544,7 +1544,7 @@ class AlertSkill(OVOSSkill):
         self.gui["header"] = header
         self.gui.show_page("ListView")
 
-    def _update_homescreen(self, alert: Alert = None, ismiss_notification=False):
+    def _update_homescreen(self, alert: Alert = None, dismiss_notification=False):
         """
         Update homescreen widgets with the current alarms and timers counts.
 
