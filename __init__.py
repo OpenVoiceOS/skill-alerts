@@ -274,12 +274,14 @@ class AlertSkill(OVOSSkill):
                     if services:
                         self.speak_dialog(dialog,
                                           {"services": join_word_list(services,
-                                                                 connector="and", sep=",", lang=self.lang)})
+                                                                      connector="and",
+                                                                      sep=",",
+                                                                      lang=self.lang)})
                 self.dav_services = dav_services
                 self.sync_frequency = sync_frequency
 
     # Intent Handlers
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateAlarm").require("alarm")
                     .require("create").optionally("question")
                     .optionally("playable").optionally("weekdays")
@@ -348,7 +350,7 @@ class AlertSkill(OVOSSkill):
     def handle_ocp_alarm_alt(self, message: Message):
         return self.handle_ocp_alarm(message)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateTimer").require("create")
                     .require("timer").optionally("question")
                     .optionally("until"))
@@ -369,7 +371,7 @@ class AlertSkill(OVOSSkill):
 
         self.confirm_alert(alert, message)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateReminder").require("create")
                     .require("reminder").optionally("question")
                     .optionally("playable").optionally("weekdays")
@@ -391,7 +393,7 @@ class AlertSkill(OVOSSkill):
             time_ = self.get_response(
                 "reminder_ask_time", validator=validate_dt_or_delta, num_retries=0
             )
-            # if response and response != "no":
+            #if response and response != "no":
             if isinstance(time_, datetime):
                 alert.expiration = time_
             elif isinstance(time_, timedelta):
@@ -409,23 +411,19 @@ class AlertSkill(OVOSSkill):
                                                        alert_type)
 
         if overlapping:
-            dialog_data = {"event": join_word_list([r.alert_name
-                                               for r in overlapping], connector="and", sep=",", lang=self.lang)}
+            dialog_data = {"event": join_word_list([r.alert_name for r in overlapping],
+                                                   connector="and", sep=",", lang=self.lang)}
             end = [a.until for a in overlapping if a.until]
             if end:
-                dialog_data["begin"] = nice_time(min([a.expiration
-                                                      for a in overlapping]))
+                dialog_data["begin"] = nice_time(min([a.expiration for a in overlapping]))
                 dialog_data["end"] = nice_time(max(end))
                 dialog = "alert_overlapping_duration_ask"
             else:
-                dialog_data["begin"] = join_word_list([nice_time(a.expiration)
-                                                  for a in overlapping], connector="and", sep=",", lang=self.lang)
+                dialog_data["begin"] = join_word_list([nice_time(a.expiration) for a in overlapping],
+                                                      connector="and", sep=",", lang=self.lang)
                 dialog = "alert_overlapping_ask"
 
-            if self.ask_yesno(dialog, dialog_data) in (
-                    "no",
-                    None,
-            ):
+            if self.ask_yesno(dialog, dialog_data) in ("no", None):
                 return
 
         if alert.alert_type == AlertType.EVENT:
@@ -434,7 +432,7 @@ class AlertSkill(OVOSSkill):
             self.specify_dav_attributes(alert, spoken_type)
         self.confirm_alert(alert, message)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateReminderAlt").require("remind")
                     .optionally("question").optionally("playable")
                     .optionally("weekdays").optionally("weekends")
@@ -447,7 +445,7 @@ class AlertSkill(OVOSSkill):
         """
         self.handle_create_reminder(message)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateEvent")
                     .require("create").require("event")
                     .optionally("question").optionally("playable")
@@ -492,14 +490,11 @@ class AlertSkill(OVOSSkill):
             dialog = "alert_rescheduled_all_day"
         else:
             alert.is_all_day = False
-            rescheduled_time = \
-                parse_relative_time_from_message(message,
-                                                 anchor_time=anchor_time)
+            rescheduled_time = parse_relative_time_from_message(message, anchor_time=anchor_time)
             dialog = "alert_rescheduled"
 
         if rescheduled_time is None:
-            return self.speak_dialog("error_no_time",
-                                     {"kind": spoken_type}, wait=True)
+            return self.speak_dialog("error_no_time", {"kind": spoken_type}, wait=True)
 
         once = True
         if alert.has_repeat and \
@@ -507,10 +502,7 @@ class AlertSkill(OVOSSkill):
                                {"type": spoken_type}) == "yes":
             once = False
 
-        rescheduled = \
-            self.alert_manager.reschedule_alert(alert,
-                                                rescheduled_time,
-                                                once)
+        rescheduled = self.alert_manager.reschedule_alert(alert, rescheduled_time, once)
         self._display_alert(rescheduled)
         dialog_data = get_alert_dialog_data(rescheduled, self.lang)
         self.speak_dialog(dialog, dialog_data, wait=True)
@@ -723,9 +715,7 @@ class AlertSkill(OVOSSkill):
 
         self.speak_dialog(dialog, data, wait=True)
 
-    @intent_handler(IntentBuilder("TimerStatus").one_of("time", "timer")
-                    .require("remaining").optionally("query")
-                    )
+    @intent_handler(IntentBuilder("TimerStatus").one_of("time", "timer").require("remaining").optionally("query"))
     def handle_timer_status(self, message: Message):
         """
         Intent handler to handle request for timer status (name optional)
@@ -795,8 +785,7 @@ class AlertSkill(OVOSSkill):
             # TODO add saveguard for DAV conten?
             for alert in alerts:
                 self._dismiss_alert(alert.ident, drop_dav=True)
-            return self.speak_dialog("confirm_cancel_timeframe" if begin else \
-                                         "confirm_cancel_all",
+            return self.speak_dialog("confirm_cancel_timeframe" if begin else "confirm_cancel_all",
                                      {"kind": spoken_type, "num": len(alerts)},
                                      wait=True)
         # Only one candidate alert
@@ -819,7 +808,7 @@ class AlertSkill(OVOSSkill):
                            'name': name}, wait=True)
 
     # Todo Lists
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(IntentBuilder("CreateList").require("create").require("list"))
     def handle_create_todo(self, message: Message, alert: Optional[Alert] = None):
         """
@@ -851,7 +840,7 @@ class AlertSkill(OVOSSkill):
 
         self.speak_dialog("confirm_todo_set", wait=True)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(
         IntentBuilder("AddListSubitems")
         .require("create").require("list").require("items")
@@ -942,8 +931,7 @@ class AlertSkill(OVOSSkill):
         IntentBuilder("QueryListEntries")
         .require("query").require("list").require("items")
     )
-    def handle_todo_list_entries(self, message: Optional[Message] = None,
-                                 alert: Optional[Alert] = None):
+    def handle_todo_list_entries(self, message: Optional[Message] = None, alert: Optional[Alert] = None):
         """
         Intent to get the items from a specific todo list
         :param message: Message associated with request
@@ -971,7 +959,7 @@ class AlertSkill(OVOSSkill):
             # delay if this handler is used in context
             time.sleep(2)
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(
         IntentBuilder("DeleteListEntries")
         .require("delete").require("items").require("list").optionally("stored")
@@ -1014,7 +1002,7 @@ class AlertSkill(OVOSSkill):
         self.speak_dialog("list_todo_num_deleted",
                           {"num": pronounce_number(len(deleted))})
 
-    # @killable_intent()
+    #@killable_intent()
     @intent_handler(
         IntentBuilder("DeleteList")
         .require("delete").require("list")
@@ -1032,8 +1020,7 @@ class AlertSkill(OVOSSkill):
         self.alert_manager.mark_todo_complete(todo)
         self.speak_dialog("list_deleted", {"name": todo.alert_name})
 
-        # @killable_intent()
-
+    #@killable_intent()
     @intent_handler(
         IntentBuilder("DeleteTodoEntries")
         .require("delete").require("todo").optionally("items").optionally("stored")
@@ -1273,8 +1260,7 @@ class AlertSkill(OVOSSkill):
                         for alert in active:
                             self._snooze_alert(alert, snooze_duration)
                         self.speak_dialog("confirm_snooze_alert",
-                                          {"duration": nice_duration(
-                                              round(duration.total_seconds()))})
+                                          {"duration": nice_duration(round(duration.total_seconds()))})
                         return True
         return False
 
@@ -1309,8 +1295,7 @@ class AlertSkill(OVOSSkill):
         :returns: best matched Alert from alerts or None
         """
         tokens = tokens or tokenize_utterance(message)
-        requested_time, requested_name = \
-            parse_alert_name_and_time_from_message(message, tokens)
+        requested_time, requested_name = parse_alert_name_and_time_from_message(message, tokens)
 
         alerts = self._get_alerts_list(alert_type,
                                        disposition=disposition)
@@ -1478,8 +1463,7 @@ class AlertSkill(OVOSSkill):
     def _display_alert(self, alert: Alert):
         return self._display_alerts(alert.alert_type, [alert])
 
-    def _display_alerts(self, alert_type: AlertType,
-                        alerts: Optional[List[Alert]] = None):
+    def _display_alerts(self, alert_type: AlertType, alerts: Optional[List[Alert]] = None):
         if alerts is None:
             alerts = self.alert_manager.get_pending_alerts(alert_type=alert_type)
 
@@ -1488,8 +1472,7 @@ class AlertSkill(OVOSSkill):
         elif alert_type == AlertType.TIMER:
             self._display_timers(alerts)
         elif alert_type != AlertType.ALL:
-            self._display_list(alerts,
-                               header=spoken_alert_type(alert_type))
+            self._display_list(alerts, header=spoken_alert_type(alert_type))
 
     def _display_alarms(self, alarms: List[Alert]):
         """
@@ -1561,8 +1544,7 @@ class AlertSkill(OVOSSkill):
         self.gui["header"] = header
         self.gui.show_page("ListView")
 
-    def _update_homescreen(self, alert: Alert = None,
-                           dismiss_notification=False):
+    def _update_homescreen(self, alert: Alert = None, ismiss_notification=False):
         """
         Update homescreen widgets with the current alarms and timers counts.
 
@@ -1656,8 +1638,7 @@ class AlertSkill(OVOSSkill):
         """
         alert_id = message.data['timer']['alertId']
         self._dismiss_alert(alert_id, speak=True)
-        LOG.debug(("Timers still active on GUI: "
-                   f"{self.alert_manager.active_gui_timers}"))
+        LOG.debug(f"Timers still active on GUI: {self.alert_manager.active_gui_timers}")
 
     def _event_cancel_alarm(self, message: Message):
         """
@@ -1722,7 +1703,7 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog("confirm_dismiss_alert",
                               {"kind": spoken_alert_type(alert.alert_type)})
         elif alert_id in self.alert_manager.missed_alerts:
-            # self.alert_manager.dismiss_missed_alert(alert_id)
+            #self.alert_manager.dismiss_missed_alert(alert_id)
             self.alert_manager.rm_alert(alert_id)
         # the notification has to be explicitly removed to not force the user to
         # additionally push the trashbin button
@@ -1862,8 +1843,7 @@ class AlertSkill(OVOSSkill):
 
         # reset volume
         if not to_play == "ocp":
-            self.bus.emit(Message("mycroft.volume.set",
-                                  {"percent": self.original_volume}))
+            self.bus.emit(Message("mycroft.volume.set", {"percent": self.original_volume}))
 
     def _speak_notify_expired(self, alert: Alert):
 
@@ -1915,8 +1895,7 @@ class AlertSkill(OVOSSkill):
                 dialog = "ocp_request_retry"
         return result
 
-    def _snooze_alert(self, alert: Alert,
-                      duration: Optional[timedelta] = None):
+    def _snooze_alert(self, alert: Alert, duration: Optional[timedelta] = None):
         """
         Helper to snooze an alert for the specified duration calling the
         alert manager, update widgets and handle media state
@@ -1944,16 +1923,13 @@ class AlertSkill(OVOSSkill):
         if not self.alert_manager.get_active_alerts():
             self.deactivate()
 
-    def _dismiss_alert(self, alert_id: str,
-                       drop_dav: bool = False,
-                       speak: bool = False):
+    def _dismiss_alert(self, alert_id: str, drop_dav: bool = False, speak: bool = False):
         """
         Handle a request to dismiss an alert. Removes the first valid entry in
         active, missed, or pending lists.
         Also handles GUI pages and homescreen widgets
 
         :param alert_id: ID of alert to dismiss
-        :param alert_type: AlertType of dismissed alert (used in spoken dialog)
         :param drop_dav: if True, remove from DAV service
         :param speak: if True, speak confirmation of alert dismissal
         """
