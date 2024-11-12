@@ -33,6 +33,7 @@ from uuid import uuid4
 
 from dateutil.relativedelta import relativedelta
 from ovos_bus_client.message import Message, dig_for_message
+from ovos_bus_client.util import get_message_lang
 from ovos_config.locale import get_default_lang, get_default_tz
 from ovos_date_parser import nice_time, nice_day, extract_datetime, extract_duration
 from ovos_number_parser import extract_number
@@ -49,7 +50,6 @@ from ovos_skill_alerts.util.locale import (
 from ovos_utils.log import LOG
 from ovos_utterance_normalizer import UtteranceNormalizerPlugin
 from rapidfuzz import fuzz
-from ovos_bus_client.util import get_message_lang
 
 
 class Tokens(list):

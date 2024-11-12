@@ -949,7 +949,7 @@ class AlertSkill(OVOSSkill):
                 "list_todo_subitems",
                 {"name": alert.alert_name,
                  "items": join_word_list([alert.alert_name for alert in list_entries],
-                                    connector="and", sep=",", lang=self.lang)},
+                                         connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
         else:
@@ -1043,7 +1043,7 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog(
                 "list_todo_subitems",
                 {"items": join_word_list([todo.alert_name for todo in todos],
-                                    connector="and", sep=",", lang=self.lang)},
+                                         connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
             time.sleep(2)
@@ -1163,8 +1163,8 @@ class AlertSkill(OVOSSkill):
             repeat_interval = translate("weekday", lang=self.lang)
         else:
             repeat_interval = join_word_list([spoken_weekday(day, self.lang)
-                                         for day in alert.repeat_days],
-                                        connector="and", sep=",", lang=self.lang)
+                                              for day in alert.repeat_days],
+                                             connector="and", sep=",", lang=self.lang)
 
         # Notify repeating alert
         if alert.audio_file:
@@ -2012,4 +2012,3 @@ class AlertSkill(OVOSSkill):
         LOG.debug(f"skill-stop called, all active alerts will be removed")
         for alert in self.alert_manager.get_active_alerts():
             self._dismiss_alert(alert.ident, speak=True)
-

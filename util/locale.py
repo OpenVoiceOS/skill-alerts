@@ -165,7 +165,7 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     return nice_duration(int(_seconds), lang=lang)
 
 
-def get_abbreviation(wd: Weekdays, lang = None) -> str:
+def get_abbreviation(wd: Weekdays, lang=None) -> str:
     if wd == Weekdays.MON:
         return translate("abbreviation_monday", lang=lang)
     elif wd == Weekdays.TUE:

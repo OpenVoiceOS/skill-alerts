@@ -29,11 +29,10 @@
 from datetime import datetime
 
 from ovos_date_parser import nice_duration, nice_time
-from ovos_utils.log import LOG
-
 from ovos_skill_alerts.util.alert import Alert, AlertType
-from ovos_skill_alerts.util.locale import get_abbreviation, translate, datetime_display
 from ovos_skill_alerts.util.config import use_24h_format
+from ovos_skill_alerts.util.locale import get_abbreviation, translate, datetime_display
+from ovos_utils.log import LOG
 
 
 def build_gui_data(alert: Alert) -> dict:
@@ -116,11 +115,10 @@ def build_alarm_data(alert: Alert) -> dict:
 
 
 def create_repeat_str(alert: Alert) -> str:
-
     def get_sequences(d):
         seq = [[d[0]]]
         for i in range(1, len(d)):
-            if d[i-1]+1 == d[i]:
+            if d[i - 1] + 1 == d[i]:
                 seq[-1].append(d[i])
             else:
                 seq.append([d[i]])
@@ -132,7 +130,7 @@ def create_repeat_str(alert: Alert) -> str:
         for i, sequence in enumerate(sequences):
             first = get_abbreviation(min(sequence), lang=alert.lang)
             last = get_abbreviation(max(sequence), lang=alert.lang)
-            if len(sequence) > 2:                
+            if len(sequence) > 2:
                 sequences[i] = f"{first}-{last}"
             elif len(sequence) == 2:
                 sequences[i] = f"{first},{last}"
@@ -145,7 +143,7 @@ def create_repeat_str(alert: Alert) -> str:
 
     if alert.until:
         if repeat_str:
-            repeat_str += "|"    
+            repeat_str += "|"
         repeat_str += f"{translate('until', lang=alert.lang)} {datetime_display(alert.until.date(), lang=alert.lang)}"
-            
+
     return repeat_str
