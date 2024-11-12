@@ -28,12 +28,11 @@
 
 from datetime import datetime
 
-from lingua_franca.format import nice_duration, nice_time
-from ovos_utils.log import LOG
-
+from ovos_date_parser import nice_duration, nice_time
 from ovos_skill_alerts.util.alert import Alert, AlertType
-from ovos_skill_alerts.util.locale import get_abbreviation, translate, datetime_display
 from ovos_skill_alerts.util.config import use_24h_format
+from ovos_skill_alerts.util.locale import get_abbreviation, translate, datetime_display
+from ovos_utils.log import LOG
 
 
 def build_gui_data(alert: Alert) -> dict:
@@ -59,13 +58,13 @@ def build_timer_data(alert: Alert) -> dict:
     if delta_seconds.total_seconds() < 0:
         percent_remaining = 0
         human_delta = '-' + nice_duration(-1 * delta_seconds.total_seconds(),
-                                          speech=False)
+                                          speech=False, lang=alert.lang)
     else:
         total_time = (datetime.now(alert.timezone).timestamp() -
                       start_time.timestamp()) + \
                      delta_seconds.total_seconds()
         percent_remaining = delta_seconds.total_seconds() / total_time
-        human_delta = nice_duration(delta_seconds.total_seconds(), speech=False)
+        human_delta = nice_duration(delta_seconds.total_seconds(), speech=False, lang=alert.lang)
 
     return {
         'alertId': alert.ident,
@@ -87,7 +86,7 @@ def build_alarm_data(alert: Alert) -> dict:
     use_24h = use_24h_format()
     alarm_time = nice_time(
         datetime.fromisoformat(alert.data["next_expiration_time"]),
-        speech=False, use_ampm=not use_24h, use_24hour=use_24h
+        speech=False, use_ampm=not use_24h, use_24hour=use_24h, lang=alert.lang
     )
     if use_24h:
         alarm_time = alarm_time
@@ -102,7 +101,7 @@ def build_alarm_data(alert: Alert) -> dict:
     if alert.has_repeat:
         alarm_repeat_str = create_repeat_str(alert)
     else:
-        alarm_repeat_str = translate("once").title()
+        alarm_repeat_str = translate("once", lang=alert.lang).title()
 
     return {
         "alarmTime": alarm_time,
@@ -111,16 +110,15 @@ def build_alarm_data(alert: Alert) -> dict:
         "alarmExpired": alarm_expired,
         "alarmIndex": alarm_index,
         "alarmRepeat": alert.has_repeat,
-        "alarmRepeatStr" : alarm_repeat_str
+        "alarmRepeatStr": alarm_repeat_str
     }
 
 
 def create_repeat_str(alert: Alert) -> str:
-
     def get_sequences(d):
         seq = [[d[0]]]
         for i in range(1, len(d)):
-            if d[i-1]+1 == d[i]:
+            if d[i - 1] + 1 == d[i]:
                 seq[-1].append(d[i])
             else:
                 seq.append([d[i]])
@@ -130,9 +128,9 @@ def create_repeat_str(alert: Alert) -> str:
     if alert.repeat_days:
         sequences = get_sequences(list(alert.repeat_days))
         for i, sequence in enumerate(sequences):
-            first = get_abbreviation(min(sequence))
-            last = get_abbreviation(max(sequence))
-            if len(sequence) > 2:                
+            first = get_abbreviation(min(sequence), lang=alert.lang)
+            last = get_abbreviation(max(sequence), lang=alert.lang)
+            if len(sequence) > 2:
                 sequences[i] = f"{first}-{last}"
             elif len(sequence) == 2:
                 sequences[i] = f"{first},{last}"
@@ -141,11 +139,11 @@ def create_repeat_str(alert: Alert) -> str:
         repeat_str = ",".join(sequences)
     elif alert.repeat_frequency:
         repeat_str = nice_duration(alert.repeat_frequency.total_seconds(),
-                                   speech=False)
+                                   speech=False, lang=alert.lang)
 
     if alert.until:
         if repeat_str:
-            repeat_str += "|"    
-        repeat_str += f"{translate('until')} {datetime_display(alert.until.date())}"
-            
+            repeat_str += "|"
+        repeat_str += f"{translate('until', lang=alert.lang)} {datetime_display(alert.until.date(), lang=alert.lang)}"
+
     return repeat_str
