@@ -26,31 +26,30 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from uuid import uuid4
 import datetime as dt
-from time import time
 import json
+from time import time
 from typing import Set, Optional, Union, List
+from uuid import uuid4
 
 import icalendar
 from dateutil.relativedelta import relativedelta
 from json_database.utils import merge_dict
-from ovos_utils.log import LOG
-from ovos_config.locale import get_default_tz
 from ovos_config import Configuration
-
+from ovos_config.locale import get_default_tz, get_default_lang
 from ovos_skill_alerts.util import AlertType, DAVType, AlertPriority, Weekdays
 from ovos_skill_alerts.util.dav_utils import process_ical_event, process_ical_todo
+from ovos_utils.log import LOG
 
 LOCAL_USER = "local"
 TZID = Configuration().get("location", {}).get("timezone", {}).get("code") or "UTC"
 
 
 def alert_time_in_range(
-    start: dt.datetime,
-    end: Optional[dt.datetime],
-    ref_start: dt.datetime,
-    ref_end: Optional[dt.datetime]
+        start: dt.datetime,
+        end: Optional[dt.datetime],
+        ref_start: dt.datetime,
+        ref_end: Optional[dt.datetime]
 ) -> bool:
     """
     Checks if two alerts with given start and end datetimes
@@ -66,7 +65,7 @@ def alert_time_in_range(
         return False
     if end is not None:
         return (start <= ref_start < end) \
-                or (start <= ref_end < end if ref_end else False)
+            or (start <= ref_end < end if ref_end else False)
     # in this case it's the reverse question
     return ref_start <= start < ref_end
 
@@ -97,15 +96,15 @@ class Alert:
         Return the user associated with this alert
         """
         return self.context.get("username") \
-                or self.context.get("user") \
-                or LOCAL_USER
+            or self.context.get("user") \
+            or LOCAL_USER
 
     @property
     def lang(self) -> str:
         """
         Returns the lang associated with this alert
         """
-        return self._data.get("lang")
+        return self._data.get("lang") or get_default_lang()
 
     @property
     def created(self) -> dt.datetime:
@@ -114,22 +113,22 @@ class Alert:
         """
         dt_ = dt.datetime.fromtimestamp(self.context.get("created"))
         return dt_.astimezone(self.timezone).replace(microsecond=0)
-    
+
     @property
     def stopwatch(self):
         """
         Returns the time elapsed since the alert was created
         """
         return self.now - self.created
-    
+
     @property
     def stopwatch_mode(self):
         """
         Returns the stopwatch mode
         """
         return self.alert_type == AlertType.TIMER and \
-                self.context.get("stopwatch_mode", False)
-    
+            self.context.get("stopwatch_mode", False)
+
     @stopwatch_mode.setter
     def stopwatch_mode(self, mode: bool):
         """
@@ -144,7 +143,7 @@ class Alert:
         """
         expiration = self._data.get("next_expiration_time")
         return dt.datetime.fromisoformat(expiration).tzinfo if expiration \
-                    else get_default_tz()
+            else get_default_tz()
 
     @property
     def alert_type(self) -> AlertType:
@@ -199,7 +198,7 @@ class Alert:
         :returns: the alert priority (1-10)
         """
         return self._data.get("priority") or AlertPriority.AVERAGE.value
-    
+
     @priority.setter
     def priority(self, num: int):
         """
@@ -224,7 +223,7 @@ class Alert:
     @property
     def now(self):
         return dt.datetime.now(tz=self.timezone)
-    
+
     # Expiration
     @property
     def prenotification(self) -> Optional[dt.datetime]:
@@ -236,7 +235,7 @@ class Alert:
         notification = self.expiration + dt.timedelta(
             seconds=self._data.get("prenotification")
         )
-        return notification if notification > self.now else None 
+        return notification if notification > self.now else None
 
     @prenotification.setter
     def prenotification(self, time_: Union[dt.timedelta, dt.datetime, relativedelta, int]):
@@ -269,8 +268,8 @@ class Alert:
     @expiration.setter
     def expiration(self, new_expiration: Union[dt.datetime, dt.date]):
         if new_expiration.__class__ == dt.date:
-            new_expiration = dt.datetime.combine(new_expiration, dt.time.min)\
-                    .replace(tzinfo=self.timezone)
+            new_expiration = dt.datetime.combine(new_expiration, dt.time.min) \
+                .replace(tzinfo=self.timezone)
         self._data["next_expiration_time"] = new_expiration.isoformat()
 
     @property
@@ -292,7 +291,7 @@ class Alert:
             return False
         now = dt.datetime.now(self.timezone)
         return now >= dt.datetime.fromisoformat(expiration)
-    
+
     @property
     def is_all_day(self) -> bool:
         """
@@ -310,7 +309,7 @@ class Alert:
         self._data["all_day"] = all_day
         if all_day:
             self._data["next_expiration_time"] = \
-                    (self.expiration.replace(hour=0, minute=0, second=0)).isoformat()
+                (self.expiration.replace(hour=0, minute=0, second=0)).isoformat()
             self.until = (self.until or self.expiration).replace(hour=23, minute=59, second=59)
 
     @property
@@ -347,14 +346,14 @@ class Alert:
             if self._data.get("repeat_frequency")
             else None
         )
-    
+
     @property
     def has_repeat(self) -> bool:
         """
         :returns: Whether the alert has any repeat information.
         """
         return any((self.repeat_days, self.repeat_frequency))
-    
+
     def reset_repeat(self):
         """
         Resets the expiration time to the last expiration (or to the 
@@ -370,7 +369,7 @@ class Alert:
         elif self.repeat_frequency:
             expiration = expiration - self.repeat_frequency
             self._data["next_expiration_time"] = expiration.isoformat()
-    
+
     def remove_repeat(self) -> None:
         """
         Purges repeat information
@@ -386,12 +385,12 @@ class Alert:
         """
         end = self._data.get("until")
         return dt.datetime.fromisoformat(end) if end else None
-    
+
     @until.setter
     def until(self, end: Union[dt.datetime, dt.timedelta]) -> None:
         if self.expiration is None:
             raise Exception("You can't set an until without expiration")
-        
+
         # relative to expiration
         if isinstance(end, dt.timedelta):
             self._data["until"] = (self.expiration + end).isoformat()
@@ -399,7 +398,7 @@ class Alert:
             self._data["until"] = end.isoformat()
         else:
             raise TypeError("until must be a datetime or timedelta object")
-    
+
     # Media associated
     @property
     def audio_file(self) -> Optional[str]:
@@ -407,7 +406,7 @@ class Alert:
         Returns the audio filename launched on expiration
         """
         return self._data.get("audio_file")
-    
+
     @property
     def ocp_request(self) -> str:
         """
@@ -421,7 +420,7 @@ class Alert:
         if not isinstance(request, (dict, type(None))):
             raise TypeError("'request' is supposed to be of type dict")
         self._data["ocp"] = request
-    
+
     @property
     def media_type(self):
         """
@@ -433,7 +432,7 @@ class Alert:
         elif self.audio_file:
             return "audio_file"
         return None
-    
+
     @property
     def media_source(self):
         """
@@ -445,7 +444,7 @@ class Alert:
         elif self.audio_file:
             return self.audio_file
         return None
-    
+
     # DAV properties
     @property
     def service(self) -> Optional[str]:
@@ -571,8 +570,8 @@ class Alert:
                 expiration += self.repeat_frequency
         elif self.repeat_days:
             while (
-                expiration <= now
-                or Weekdays(expiration.weekday()) not in self.repeat_days
+                    expiration <= now
+                    or Weekdays(expiration.weekday()) not in self.repeat_days
             ):
                 expiration += dt.timedelta(days=1)
         elif self.until is not None:
@@ -588,7 +587,7 @@ class Alert:
         LOG.debug(f"New expiration set for {self.ident}({self.alert_name}): {expiration}")
         return expiration
 
-# Constructors
+    # Constructors
     @staticmethod
     def from_dict(alert_data: dict):
         """
@@ -618,7 +617,7 @@ class Alert:
         """
         ical = icalendar.Calendar()
         expiration = self.expiration
-        
+
         if self.dav_type == DAVType.VEVENT:
             component = icalendar.Event()
             alarm = icalendar.Alarm()
@@ -669,19 +668,20 @@ class Alert:
 
     @staticmethod
     def create(
-        expiration: Union[dt.date, dt.datetime, str] = None,
-        prenotification: int = None,
-        alert_name: str = None,
-        alert_type: AlertType = AlertType.UNKNOWN,
-        dav_type: DAVType = DAVType.VEVENT,
-        priority: int = AlertPriority.AVERAGE.value,
-        repeat_frequency: Union[int, dt.timedelta] = None,
-        repeat_days: Set[Weekdays] = None,
-        until: Union[dt.datetime, str] = None,
-        audio_file: str = None,
-        dav_calendar: str = None,
-        dav_service: str = None,
-        context: dict = None,
+            expiration: Union[dt.date, dt.datetime, str] = None,
+            prenotification: int = None,
+            alert_name: str = None,
+            alert_type: AlertType = AlertType.UNKNOWN,
+            dav_type: DAVType = DAVType.VEVENT,
+            priority: int = AlertPriority.AVERAGE.value,
+            repeat_frequency: Union[int, dt.timedelta] = None,
+            repeat_days: Set[Weekdays] = None,
+            until: Union[dt.datetime, str] = None,
+            audio_file: str = None,
+            dav_calendar: str = None,
+            dav_service: str = None,
+            context: dict = None,
+            lang: str = None
     ):
         """
         Object representing an arbitrary alert
@@ -705,8 +705,8 @@ class Alert:
                 expiration = dt.datetime.fromisoformat(expiration)
             elif expiration.__class__ == dt.date:
                 data["all_day"] = True
-                expiration = dt.datetime.combine(expiration, dt.time.min)\
-                        .replace(tzinfo=get_default_tz())
+                expiration = dt.datetime.combine(expiration, dt.time.min) \
+                    .replace(tzinfo=get_default_tz())
             if not expiration.tzinfo:
                 raise ValueError("expiration missing tzinfo")
             # Round off any microseconds
@@ -751,8 +751,7 @@ class Alert:
             context["ident"] = str(uuid4())
 
         data.update({
-            "next_expiration_time": expiration.isoformat() if expiration \
-                                                           else None,
+            "next_expiration_time": expiration.isoformat() if expiration else None,
             "prenotification": prenotification,
             "alert_type": alert_type.value,
             "dav_type": dav_type.value,
@@ -767,6 +766,7 @@ class Alert:
             "dav_service": dav_service,
             "dav_synchron": False,
         })
+        data["lang"] = lang or get_default_lang()
         return Alert(data)
 
 
@@ -779,7 +779,7 @@ def is_alert_type(alert: Alert, alert_type: AlertType) -> bool:
     """
     if alert_type == AlertType.ALL:
         return True
-    
+
     return alert.alert_type == alert_type.value
 
 
@@ -808,4 +808,3 @@ def properties_changed(local: Alert, dav: Alert) -> bool:
             local.until != dav.until
         ]
     )
-       

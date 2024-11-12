@@ -1,45 +1,48 @@
-from os import walk
-from os.path import join, dirname
-from typing import Optional, List, Union, Tuple, Any
 import datetime as dt
 import re
+from os import walk
+from os.path import join, dirname
+from typing import Optional, List, Union, Tuple
 
 from ovos_bus_client.message import Message
-from lingua_franca.format import (
+from ovos_bus_client.util import get_message_lang
+from ovos_config.locale import get_default_lang
+from ovos_date_parser import (
     nice_duration,
     nice_time,
     nice_date,
-    nice_date_time,
-    join_list,
+    nice_date_time
 )
-from ovos_config.locale import get_default_lang, load_language
-from lingua_franca.format import nice_duration, expand_options
-
 from ovos_skill_alerts.util import AlertType, Weekdays, WEEKDAYS, WEEKENDS, EVERYDAY
 from ovos_skill_alerts.util.alert import Alert
 from ovos_skill_alerts.util.config import use_24h_format, get_date_format
+from ovos_utils.bracket_expansion import expand_options
+from ovos_workshop.skills.ovos import join_word_list
 
 
 def datetime_display(begin: dt.datetime,
-                     end: Optional[dt.datetime] = None) -> str:
-    
+                     end: Optional[dt.datetime] = None,
+                     lang: str = None) -> str:
+    lang = lang or get_default_lang()
     use_24h = use_24h_format()
     date_format = get_date_format()
 
     display = date_display(begin, date_format) + " " + \
-                time_display(begin, use_24h)
+              time_display(begin, use_24h, lang=lang)
     if end and end.date() != begin.date():
         display += " - " + date_display(end, date_format) + " " + \
-                    time_display(end, use_24h)
+                   time_display(end, use_24h, lang=lang)
     elif end:
-        display += " - " + time_display(end, use_24h)
-    
+        display += " - " + time_display(end, use_24h, lang=lang)
+
     return display
 
 
 def time_display(dt_obj: dt.datetime,
-                 use_24h: bool = True) -> str:    
-    return nice_time(dt_obj,
+                 use_24h: bool = True,
+                 lang: str = None) -> str:
+    lang = lang or get_default_lang()
+    return nice_time(dt_obj, lang=lang,
                      speech=False,
                      use_24hour=use_24h,
                      use_ampm=not use_24h)
@@ -53,8 +56,10 @@ def date_display(dt_obj: dt.datetime,
         display = dt_obj.strftime("%-d/%-m/%Y")
     elif date_format == "YMD":
         display = dt_obj.strftime("%Y/%-m/%-d")
+    else:
+        raise ValueError(f"Invalid date format: {date_format}")
     return display
-    
+
 
 def translate(word, lang=None):
     lang = lang or get_default_lang()
@@ -66,8 +71,7 @@ def translate(word, lang=None):
     raise FileNotFoundError
 
 
-def spoken_alert_type(alert_type: AlertType,
-                      lang: str = None) -> str:
+def spoken_alert_type(alert_type: AlertType, lang: str = None) -> str:
     """
     Get a translated string for the specified alert_type
     :param alert_type: AlertType to be spoken
@@ -136,14 +140,14 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     :param lang: Language to format response in
     :return: speakable duration string
     """
-    load_language(lang or get_default_lang())
+    lang = lang or get_default_lang()
     if isinstance(alert_time, dt.datetime):
         anchor_time = anchor_time or \
-                dt.datetime.now(alert_time.tzinfo).replace(microsecond=0)
+                      dt.datetime.now(alert_time.tzinfo).replace(microsecond=0)
         remaining_time: dt.timedelta = alert_time - anchor_time
     else:
         remaining_time = alert_time
-    
+
     # changing resolution
     # days
     if remaining_time > dt.timedelta(weeks=1):
@@ -158,25 +162,24 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     else:
         _seconds = remaining_time.total_seconds()
 
-    return nice_duration(int(_seconds),
-                         lang=lang)
+    return nice_duration(int(_seconds), lang=lang)
 
 
-def get_abbreviation(wd: Weekdays) -> str:
+def get_abbreviation(wd: Weekdays, lang=None) -> str:
     if wd == Weekdays.MON:
-        return translate("abbreviation_monday")
+        return translate("abbreviation_monday", lang=lang)
     elif wd == Weekdays.TUE:
-        return translate("abbreviation_tuesday")
+        return translate("abbreviation_tuesday", lang=lang)
     elif wd == Weekdays.WED:
-        return translate("abbreviation_wednesday")
+        return translate("abbreviation_wednesday", lang=lang)
     elif wd == Weekdays.THU:
-        return translate("abbreviation_thursday")
+        return translate("abbreviation_thursday", lang=lang)
     elif wd == Weekdays.FRI:
-        return translate("abbreviation_friday")
+        return translate("abbreviation_friday", lang=lang)
     elif wd == Weekdays.SAT:
-        return translate("abbreviation_saturday")
+        return translate("abbreviation_saturday", lang=lang)
     elif wd == Weekdays.SUN:
-        return translate("abbreviation_sunday")
+        return translate("abbreviation_sunday", lang=lang)
 
 
 def get_alert_type_from_intent(message: Message) \
@@ -186,7 +189,7 @@ def get_alert_type_from_intent(message: Message) \
     :param message: Message associated with intent match
     :returns: tuple of AlertType requested and spoken_type 
     """
-    lang = message.data.get("lang")
+    lang = get_message_lang(message)
     if message.data.get("alarm") or message.data.get("wake"):
         return AlertType.ALARM, translate("alarm", lang)
     elif message.data.get('timer'):
@@ -242,8 +245,7 @@ def get_alert_dialog_data(alert: Alert,
     :param lang: User language to be spoken
     :returns: dict dialog_data to pass to `speak_dialog`
     """
-    lang = lang or get_default_lang()
-    load_language(lang)
+    lang = lang or alert.lang
     use_24hour = use_24h_format()
 
     expired_time = alert.data["next_expiration_time"]
@@ -257,11 +259,11 @@ def get_alert_dialog_data(alert: Alert,
     if anchor_date.date() != expired_time.date() and \
             not alert.has_repeat:
         if alert.is_all_day:
-            spoken_time = f"{nice_date(expired_time, lang)}, "
+            spoken_time = f"{nice_date(expired_time, lang=lang)}, "
             spoken_time += translate("whole_day", lang)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_date_time(expired_time, lang,
+            spoken_time = nice_date_time(expired_time, lang=lang,
                                          use_24hour=use_24hour,
                                          use_ampm=not use_24hour)
     else:
@@ -269,7 +271,7 @@ def get_alert_dialog_data(alert: Alert,
             spoken_time = translate("whole_day", lang)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_time(expired_time, lang,
+            spoken_time = nice_time(expired_time, lang=lang,
                                     use_24hour=use_24hour,
                                     use_ampm=not use_24hour)
 
@@ -284,12 +286,12 @@ def get_alert_dialog_data(alert: Alert,
     # add event end
     if alert.until and not alert.is_all_day:
         if anchor_date.date() != alert.until.date():
-            spoken_time = nice_date_time(alert.until, lang,
+            spoken_time = nice_date_time(alert.until, lang=lang,
                                          use_24hour=use_24hour,
                                          use_ampm=not use_24hour)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_time(alert.until, lang,
+            spoken_time = nice_time(alert.until, lang=lang,
                                     use_24hour=use_24hour,
                                     use_ampm=not use_24hour)
         data["end"] = spoken_time
@@ -302,15 +304,15 @@ def get_alert_dialog_data(alert: Alert,
         elif alert.repeat_days == EVERYDAY:
             data["repeat"] = translate("day", lang)
         else:
-            data["repeat"] = join_list([spoken_weekday(day, lang)
-                                        for day in alert.repeat_days],
-                                       "and")
+            data["repeat"] = join_word_list([spoken_weekday(day, lang)
+                                             for day in alert.repeat_days],
+                                            connector="and", sep=",", lang=lang)
     elif alert.repeat_frequency:
         data["repeat"] = nice_duration(
-            alert.repeat_frequency.total_seconds())
-    
+            alert.repeat_frequency.total_seconds(), lang=lang)
+
     if alert.prenotification:
-        data["prenotification"] = nice_time(alert.prenotification)
+        data["prenotification"] = nice_time(alert.prenotification, lang=lang)
 
     return data
 

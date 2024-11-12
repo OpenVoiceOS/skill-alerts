@@ -26,44 +26,19 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import os
-import sys
+import time
+from datetime import datetime, timedelta
 from threading import RLock
-from typing import Tuple, List, Optional, Union, Any
-from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 from dateutil.relativedelta import relativedelta
-# TODO - deprecate LF (ovos-classifiers should be used)
-from lingua_franca.format import (
-    nice_duration,
-    nice_time,
-    nice_date_time,
-    pronounce_number,
-    join_list,
-)
-# TODO - normalization happens in intent stage (transformer) > 0.0.8
-from lingua_franca.parse import normalize
 from ovos_bus_client.message import Message
-from ovos_workshop.skills import OVOSSkill
-from ovos_utils.log import LOG
-from ovos_workshop.intents import IntentBuilder
-from ovos_workshop.decorators import intent_handler, killable_intent
-from ovos_utils.sound import play_audio
-from ovos_utils import create_daemon, classproperty
-from ovos_utils.process_utils import RuntimeRequirements
-from ovos_config import get_default_lang
-
-from ovos_skill_alerts.util import Weekdays, AlertState, MatchLevel, AlertPriority, WEEKDAYS, WEEKENDS, EVERYDAY
-from ovos_skill_alerts.util.ui_models import build_gui_data
-from ovos_skill_alerts.util.alert_manager import AlertManager, SYNC_LOCK
+from ovos_date_parser import nice_date_time, nice_time, nice_duration
+from ovos_number_parser import pronounce_number
+from ovos_skill_alerts.util import AlertState, MatchLevel, AlertPriority, WEEKDAYS
 from ovos_skill_alerts.util.alert import Alert, AlertType, DAVType, LOCAL_USER
-from ovos_skill_alerts.util.media import (
-    get_ocp_media_type,
-    ocp_query,
-    ocp_request,
-    get_media_source_from_intent
-)
+from ovos_skill_alerts.util.alert_manager import AlertManager, SYNC_LOCK
 from ovos_skill_alerts.util.config import use_24h_format, get_default_tz, DEFAULT_SETTINGS
 from ovos_skill_alerts.util.locale import (
     translate,
@@ -74,6 +49,11 @@ from ovos_skill_alerts.util.locale import (
     get_alert_dialog_data,
     get_alert_type_from_intent,
     datetime_display
+)
+from ovos_skill_alerts.util.media import (
+    ocp_query,
+    ocp_request,
+    get_media_source_from_intent
 )
 from ovos_skill_alerts.util.parse_utils import (
     tokenize_utterance,
@@ -94,6 +74,16 @@ from ovos_skill_alerts.util.parse_utils import (
     fuzzy_match,
     fuzzy_match_alerts
 )
+from ovos_skill_alerts.util.ui_models import build_gui_data
+from ovos_utils import create_daemon, classproperty
+from ovos_utils.log import LOG
+from ovos_utils.process_utils import RuntimeRequirements
+from ovos_utils.sound import play_audio
+from ovos_utterance_normalizer import UtteranceNormalizerPlugin
+from ovos_workshop.decorators import intent_handler
+from ovos_workshop.intents import IntentBuilder
+from ovos_workshop.skills import OVOSSkill
+from ovos_workshop.skills.ovos import join_word_list
 
 
 class AlertSkill(OVOSSkill):
@@ -108,7 +98,7 @@ class AlertSkill(OVOSSkill):
         self._gui_timer_lock = RLock()
 
         super().__init__(*args, **kwargs)
-    
+
     @classproperty
     def runtime_requirements(self):
         return RuntimeRequirements(internet_before_load=False,
@@ -177,7 +167,7 @@ class AlertSkill(OVOSSkill):
         if not file:
             raise FileNotFoundError(f"Could not resolve sound: {filename}")
         return file
-    
+
     @property
     def play_volume(self) -> int:
         """
@@ -283,12 +273,14 @@ class AlertSkill(OVOSSkill):
                 for dialog, services in errors.items():
                     if services:
                         self.speak_dialog(dialog,
-                                          {"services": join_list(services,
-                                                                 "and")})
+                                          {"services": join_word_list(services,
+                                                                      connector="and",
+                                                                      sep=",",
+                                                                      lang=self.lang)})
                 self.dav_services = dav_services
                 self.sync_frequency = sync_frequency
 
-# Intent Handlers
+    # Intent Handlers
     #@killable_intent()
     @intent_handler(IntentBuilder("CreateAlarm").require("alarm")
                     .require("create").optionally("question")
@@ -341,7 +333,7 @@ class AlertSkill(OVOSSkill):
 
         alert_time = parse_alert_time_from_message(message)
         # in case no time was specified, use the next upcoming alarm
-        if not alert_time: 
+        if not alert_time:
             alarms = self._get_alerts_list(AlertType.ALARM)
             if not alarms:
                 return self.speak_dialog("list_alert_none_upcoming",
@@ -352,12 +344,12 @@ class AlertSkill(OVOSSkill):
             alarm.ocp_request = ocp_result
             assert alarm.media_type == "ocp"
             self.confirm_alert(alarm, message)
-    
+
     @intent_handler(IntentBuilder("CreateOcpAlarmAlt").require("wake")
                     .require("media").optionally("question"))
     def handle_ocp_alarm_alt(self, message: Message):
         return self.handle_ocp_alarm(message)
-            
+
     #@killable_intent()
     @intent_handler(IntentBuilder("CreateTimer").require("create")
                     .require("timer").optionally("question")
@@ -419,23 +411,19 @@ class AlertSkill(OVOSSkill):
                                                        alert_type)
 
         if overlapping:
-            dialog_data = {"event": join_list([r.alert_name
-                                               for r in overlapping], "and")}
+            dialog_data = {"event": join_word_list([r.alert_name for r in overlapping],
+                                                   connector="and", sep=",", lang=self.lang)}
             end = [a.until for a in overlapping if a.until]
             if end:
-                dialog_data["begin"]= nice_time(min([a.expiration 
-                                                     for a in overlapping]))
-                dialog_data["end"] = nice_time(max(end))
+                dialog_data["begin"] = nice_time(min([a.expiration for a in overlapping]), lang=self.lang)
+                dialog_data["end"] = nice_time(max(end), lang=self.lang)
                 dialog = "alert_overlapping_duration_ask"
             else:
-                dialog_data["begin"] = join_list([nice_time(a.expiration)
-                                                  for a in overlapping], "and")
+                dialog_data["begin"] = join_word_list([nice_time(a.expiration, lang=self.lang) for a in overlapping],
+                                                      connector="and", sep=",", lang=self.lang)
                 dialog = "alert_overlapping_ask"
 
-            if self.ask_yesno(dialog, dialog_data) in (
-                "no",
-                None,
-            ):
+            if self.ask_yesno(dialog, dialog_data) in ("no", None):
                 return
 
         if alert.alert_type == AlertType.EVENT:
@@ -489,7 +477,7 @@ class AlertSkill(OVOSSkill):
         if alert is None:
             return self.speak_dialog("error_no_scheduled_kind",
                                      {"kind": spoken_type}, wait=True)
-        
+
         # ref_day = convenience experimental because of repeating alerts
         # user only have to state the time instead remembering the day
         ref_day = alert.expiration.replace(hour=0, minute=0, second=0)
@@ -502,25 +490,19 @@ class AlertSkill(OVOSSkill):
             dialog = "alert_rescheduled_all_day"
         else:
             alert.is_all_day = False
-            rescheduled_time = \
-                    parse_relative_time_from_message(message,
-                                                     anchor_time=anchor_time)
+            rescheduled_time = parse_relative_time_from_message(message, anchor_time=anchor_time)
             dialog = "alert_rescheduled"
 
         if rescheduled_time is None:
-            return self.speak_dialog("error_no_time",
-                                     {"kind": spoken_type}, wait=True) 
-        
+            return self.speak_dialog("error_no_time", {"kind": spoken_type}, wait=True)
+
         once = True
         if alert.has_repeat and \
                 self.ask_yesno("reschedule_recurring_ask",
                                {"type": spoken_type}) == "yes":
-            once = False       
+            once = False
 
-        rescheduled = \
-                self.alert_manager.reschedule_alert(alert,
-                                                    rescheduled_time,
-                                                    once)
+        rescheduled = self.alert_manager.reschedule_alert(alert, rescheduled_time, once)
         self._display_alert(rescheduled)
         dialog_data = get_alert_dialog_data(rescheduled, self.lang)
         self.speak_dialog(dialog, dialog_data, wait=True)
@@ -529,7 +511,7 @@ class AlertSkill(OVOSSkill):
             self.ask_for_prenotification(rescheduled,
                                          "alert_rescheduled_prenotification",
                                          dialog_data)
-    
+
     @intent_handler(IntentBuilder("RescheduleAlertAlt")
                     .one_of("earlier", "later").optionally("next")
                     .one_of("alarm", "reminder", "event", "timer")
@@ -555,7 +537,7 @@ class AlertSkill(OVOSSkill):
         if alert is None:
             return self.speak_dialog("error_no_scheduled_kind",
                                      {"kind": spoken_type}, wait=True)
-        
+
         if message.data.get("priority"):
             old_priority = alert.priority
             priority = parse_alert_priority_from_message(message)
@@ -597,7 +579,7 @@ class AlertSkill(OVOSSkill):
 
         alert_type, spoken_type = get_alert_type_from_intent(message)
         alert: Alert = self._resolve_requested_alert(message, alert_type)
-        
+
         old_media = alert.media_type
         new_media = get_media_source_from_intent(message)
         if new_media == "file":
@@ -606,14 +588,14 @@ class AlertSkill(OVOSSkill):
                 alert.audio_file = f"file:/{audio}"
             else:
                 return self.speak_dialog("error_no_script", {"kind": spoken_type})
-        
+
         if old_media:
             self.speak_dialog("media_type_changed",
-                              {"old": translate(old_media),
-                               "new": translate(new_media)})
+                              {"old": translate(old_media, lang=self.lang),
+                               "new": translate(new_media, lang=self.lang)})
         else:
             self.speak_dialog("media_type_set",
-                              {"new": translate(new_media)})
+                              {"new": translate(new_media, lang=self.lang)})
 
     # Query Alerts
     @intent_handler(IntentBuilder("ListAlerts").require("query")
@@ -629,8 +611,8 @@ class AlertSkill(OVOSSkill):
             Are there any events at 8 pm
         :param message: Message associated with request
         """
-        utterance = normalize(message.data.get("utterance", ""),
-                              lang=self.lang, remove_articles=False).lower()
+        normalizer = UtteranceNormalizerPlugin.get_normalizer(lang=self.lang)
+        utterance = normalizer.normalize(message.data.get("utterance", "")).lower()
         alert_type, spoken_type = get_alert_type_from_intent(message)
         begin, end = parse_timeframe_from_message(message)
 
@@ -643,7 +625,7 @@ class AlertSkill(OVOSSkill):
             if self.voc_match("next", utterance):
                 return self.handle_next_alert(message)
             return self.handle_list_all_alerts(message)
-          
+
         overlapping = self.alert_manager.get_alerts_in_timeframe(begin,
                                                                  end,
                                                                  alert_type)
@@ -660,7 +642,7 @@ class AlertSkill(OVOSSkill):
                     self.speak_dialog("list_alert_wo_duration", data)
         else:
             self.speak_dialog("list_alert_timeframe_none")
-    
+
     def handle_list_all_alerts(self, message: Message):
         """
         Handler to handle request for all alerts (kind optional)
@@ -677,11 +659,11 @@ class AlertSkill(OVOSSkill):
         self._display_alerts(alert_type, alerts_list)
 
         if message.data.get("alert"):
-            kinds = {(a.alert_type.value, spoken_alert_type(a.alert_type)) 
-                    for a in alerts_list if a.expiration is not None}
+            kinds = {(a.alert_type.value, spoken_alert_type(a.alert_type))
+                     for a in alerts_list if a.expiration is not None}
         else:
             kinds = {(alert_type.value, spoken_type)}
-        
+
         # Restrict to max 10(?) alerts
         if len(alerts_list) > 10:
             alerts_list = alerts_list[:10]
@@ -725,7 +707,7 @@ class AlertSkill(OVOSSkill):
         data = get_alert_dialog_data(alert, self.lang)
 
         self._display_alert(alert)
-        
+
         if alert.alert_type == AlertType.TIMER:
             dialog = "next_alert_timer"
         else:
@@ -733,9 +715,7 @@ class AlertSkill(OVOSSkill):
 
         self.speak_dialog(dialog, data, wait=True)
 
-    @intent_handler(IntentBuilder("TimerStatus").one_of("time", "timer")
-        .require("remaining").optionally("query")
-    )
+    @intent_handler(IntentBuilder("TimerStatus").one_of("time", "timer").require("remaining").optionally("query"))
     def handle_timer_status(self, message: Message):
         """
         Intent handler to handle request for timer status (name optional)
@@ -749,11 +729,11 @@ class AlertSkill(OVOSSkill):
 
         # show timers if not already up
         self._display_alerts(AlertType.TIMER, user_timers)
-        
+
         for i, timer in enumerate(user_timers):
             dialog_data = get_alert_dialog_data(timer, self.lang)
             if not dialog_data["name"] and len(user_timers) > 1:
-                dialog_data["name"] = pronounce_number(i+1, ordinals=True)
+                dialog_data["name"] = pronounce_number(i + 1, ordinals=True)
             self.speak_dialog("timer_status", dialog_data, wait=True)
 
     # TODO - connect this to naptime skill - mycroft.awoken bus message
@@ -805,8 +785,7 @@ class AlertSkill(OVOSSkill):
             # TODO add saveguard for DAV conten?
             for alert in alerts:
                 self._dismiss_alert(alert.ident, drop_dav=True)
-            return self.speak_dialog("confirm_cancel_timeframe" if begin else \
-                                     "confirm_cancel_all",
+            return self.speak_dialog("confirm_cancel_timeframe" if begin else "confirm_cancel_all",
                                      {"kind": spoken_type, "num": len(alerts)},
                                      wait=True)
         # Only one candidate alert
@@ -849,7 +828,7 @@ class AlertSkill(OVOSSkill):
             return
         if not alert:
             alert = Alert.create(
-                alert_name=name, alert_type=AlertType.TODO, dav_type=DAVType.VTODO
+                alert_name=name, alert_type=AlertType.TODO, dav_type=DAVType.VTODO, lang=self.lang
             )
         if self.alert_manager.dav_active:
             self.specify_dav_attributes(alert,
@@ -894,6 +873,7 @@ class AlertSkill(OVOSSkill):
                 dav_calendar=todo.calendar,
                 dav_service=todo.service,
                 context=dict(related_to=todo.ident),
+                lang=self.lang
             )
             self.alert_manager.add_alert(alert)
         self.speak_dialog(
@@ -920,7 +900,7 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog(
                 "list_todo_lists",
                 {"num": pronounce_number(len(names)),
-                 "lists": join_list(names, "and")},
+                 "lists": join_word_list(names, connector="and", sep=",", lang=self.lang)},
             )
         else:
             self.speak_dialog("list_todo_no_lists")
@@ -942,7 +922,8 @@ class AlertSkill(OVOSSkill):
                 self._display_list(todos)
             self.speak_dialog(
                 "list_todo_reminder",
-                {"reminders": join_list([todo.alert_name for todo in todos], "and")},
+                {"reminders": join_word_list([todo.alert_name for todo in todos],
+                                             connector="and", sep=",", lang=self.lang)},
             )
         else:
             self.speak_dialog("list_todo_no_reminder")
@@ -951,8 +932,7 @@ class AlertSkill(OVOSSkill):
         IntentBuilder("QueryListEntries")
         .require("query").require("list").require("items")
     )
-    def handle_todo_list_entries(self, message: Optional[Message] = None,
-                                       alert: Optional[Alert] = None):
+    def handle_todo_list_entries(self, message: Optional[Message] = None, alert: Optional[Alert] = None):
         """
         Intent to get the items from a specific todo list
         :param message: Message associated with request
@@ -968,8 +948,8 @@ class AlertSkill(OVOSSkill):
             self.speak_dialog(
                 "list_todo_subitems",
                 {"name": alert.alert_name,
-                 "items": join_list([alert.alert_name for alert in list_entries],
-                                    "and", lang=self.lang)},
+                 "items": join_word_list([alert.alert_name for alert in list_entries],
+                                         connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
         else:
@@ -996,7 +976,7 @@ class AlertSkill(OVOSSkill):
 
         if todo is None:
             return
-        
+
         if message.data.get("stored"):
             to_delete = [todo.alert_name for todo in
                          self.alert_manager.get_children(todo.ident)]
@@ -1022,7 +1002,7 @@ class AlertSkill(OVOSSkill):
                 deleted.remove(item)
         self.speak_dialog("list_todo_num_deleted",
                           {"num": pronounce_number(len(deleted))})
-    
+
     #@killable_intent()
     @intent_handler(
         IntentBuilder("DeleteList")
@@ -1034,12 +1014,12 @@ class AlertSkill(OVOSSkill):
 
         if todo is None:
             return
-        
+
         children = self.alert_manager.get_children(todo.ident)
         for child in children:
             self.alert_manager.mark_todo_complete(child)
         self.alert_manager.mark_todo_complete(todo)
-        self.speak_dialog("list_deleted", {"name": todo.alert_name})        
+        self.speak_dialog("list_deleted", {"name": todo.alert_name})
 
     #@killable_intent()
     @intent_handler(
@@ -1062,15 +1042,15 @@ class AlertSkill(OVOSSkill):
             self._display_alerts(AlertType.TODO, todos)
             self.speak_dialog(
                 "list_todo_subitems",
-                {"items": join_list([todo.alert_name for todo in todos],
-                                    "and", lang=self.lang)},
+                {"items": join_word_list([todo.alert_name for todo in todos],
+                                         connector="and", sep=",", lang=self.lang)},
                 wait=True,
             )
             time.sleep(2)
             to_delete = self._get_response_cascade("remove_list_items_ask",
                                                    {"lang": self.lang},
                                                    message=message)
-        
+
         deleted = to_delete[:]
         for item in to_delete:
             todo = fuzzy_match_alerts(todos, item, 90)
@@ -1102,9 +1082,10 @@ class AlertSkill(OVOSSkill):
         for service, calendars in calendars.items():
             self.speak_dialog(
                 "dav_calendar_list",
-                data={"service": service, "calendars": join_list(calendars, "and")},
+                data={"service": service, "calendars": join_word_list(calendars,
+                                                                      connector="and", sep=",", lang=self.lang)},
             )
-    
+
     @intent_handler(
         IntentBuilder("DAVSync")
         .require("synchronize").one_of("calendar", "event", "reminder")
@@ -1118,7 +1099,7 @@ class AlertSkill(OVOSSkill):
             return
 
         self.alert_manager.sync_dav()
-        
+
     def confirm_alert(self, alert: Alert, message: Message,
                       anchor_time: Optional[datetime] = None):
         """
@@ -1139,7 +1120,7 @@ class AlertSkill(OVOSSkill):
         # This is patching LF type annotation bug
         # noinspection PyTypeChecker
         spoken_alert_time = \
-            nice_time(alert.expiration, self.lang,
+            nice_time(alert.expiration, lang=self.lang,
                       use_24hour=self.use_24hour, use_ampm=not self.use_24hour)
 
         # Schedule alert expirations
@@ -1151,7 +1132,7 @@ class AlertSkill(OVOSSkill):
 
         if alert.alert_type == AlertType.TIMER:
             self.speak_dialog('confirm_timer_started',
-                            {'remaining': duration}, wait=True)
+                              {'remaining': duration}, wait=True)
             return
 
         # Notify one-time Alert
@@ -1177,12 +1158,13 @@ class AlertSkill(OVOSSkill):
                 alert.expiration,
                 self.lang)
         elif len(alert.repeat_days) == 7:
-            repeat_interval = translate("day", self.lang)
+            repeat_interval = translate("day", lang=self.lang)
         elif alert.repeat_days == WEEKDAYS:
-            repeat_interval = translate("weekday", self.lang)
+            repeat_interval = translate("weekday", lang=self.lang)
         else:
-            repeat_interval = join_list([spoken_weekday(day, self.lang)
-                                         for day in alert.repeat_days], "and")
+            repeat_interval = join_word_list([spoken_weekday(day, self.lang)
+                                              for day in alert.repeat_days],
+                                             connector="and", sep=",", lang=self.lang)
 
         # Notify repeating alert
         if alert.audio_file:
@@ -1200,8 +1182,8 @@ class AlertSkill(OVOSSkill):
                               wait=True)
 
     def ask_for_prenotification(self, alert: Alert,
-                                      dialog: str = "alert_prenotification_ask",
-                                      data: Optional[dict] = None) -> None:
+                                dialog: str = "alert_prenotification_ask",
+                                data: Optional[dict] = None) -> None:
         """
         Asks if a prenotification (short pre notice) should be added
         :param alert: Alert object built from user request
@@ -1256,7 +1238,7 @@ class AlertSkill(OVOSSkill):
         If there is an active alert, see if the user is trying to dismiss it
         """
         user_alerts = self.alert_manager.get_alerts()
-        active : List[Alert] = user_alerts["active"]
+        active: List[Alert] = user_alerts["active"]
         if active:
             LOG.debug(f"User has active alerts: {[a.alert_name for a in active]}")
             for utterance in message.data.get("utterances"):
@@ -1278,17 +1260,17 @@ class AlertSkill(OVOSSkill):
                     if voc_match(_utterance, "snooze", self.lang, exact=True):
                         for alert in active:
                             self._snooze_alert(alert, snooze_duration)
-                        self.speak_dialog("confirm_snooze_alert", 
-                                          {"duration": nice_duration(
-                                                round(duration.total_seconds()))})
+                        self.speak_dialog("confirm_snooze_alert",
+                                          {"duration": nice_duration(round(duration.total_seconds()),
+                                                                     lang=self.lang)})
                         return True
         return False
 
     def _get_response_cascade(self, dialog: str = "",
-                                    data: Optional[dict] = None,
-                                    message: Optional[Message] = None):
+                              data: Optional[dict] = None,
+                              message: Optional[Message] = None):
 
-        data = data or dict()  
+        data = data or dict()
         response = False
         items = []
         self.speak_dialog(dialog, data, wait=True)
@@ -1299,13 +1281,13 @@ class AlertSkill(OVOSSkill):
 
         return items
 
-# Search methods
+    # Search methods
     def _resolve_requested_alert(
-        self, message: Message,
-        alert_type: AlertType,
-        tokens = None,
-        disposition: AlertState = AlertState.PENDING,
-        dialog: str = "pick_multiple_entries"
+            self, message: Message,
+            alert_type: AlertType,
+            tokens=None,
+            disposition: AlertState = AlertState.PENDING,
+            dialog: str = "pick_multiple_entries"
     ) -> Optional[Alert]:
         """
         Resolve a valid requested alert from a user intent
@@ -1315,19 +1297,18 @@ class AlertSkill(OVOSSkill):
         :returns: best matched Alert from alerts or None
         """
         tokens = tokens or tokenize_utterance(message)
-        requested_time, requested_name = \
-                parse_alert_name_and_time_from_message(message, tokens)
+        requested_time, requested_name = parse_alert_name_and_time_from_message(message, tokens)
 
         alerts = self._get_alerts_list(alert_type,
                                        disposition=disposition)
         if not alerts:
             return None
-        
+
         # List handling (except lists in the process of creation)
         if alert_type == AlertType.TODO and message.data.get("list") and \
                 not message.data.get("create"):
             alerts = list(filter(lambda alert: alert.children, alerts))
-        
+
         if message.data.get("next") or len(alerts) == 1:
             return alerts[0]
         elif not any((requested_name, requested_time)):
@@ -1353,7 +1334,7 @@ class AlertSkill(OVOSSkill):
             # fuzzy_match aggregates ratio, partial_ratio and token_sort_ratio
             match_acc = fuzzy_match(alert.alert_name, requested_name)
             if match_acc >= 90:
-                candidates.append((match_acc,alert,))
+                candidates.append((match_acc, alert,))
         if not candidates:
             return None
 
@@ -1400,15 +1381,15 @@ class AlertSkill(OVOSSkill):
         if len(alerts) > 1:
             alerts.sort(key=lambda x: x.expiration)
             spoken_list = [
-                f"{pronounce_number(i+1)}. \
-                    {nice_date_time(alert.expiration,use_24hour=self.use_24hour,use_ampm=not self.use_24hour)}"
+                f"{pronounce_number(i + 1)}. \
+                    {nice_date_time(alert.expiration, use_24hour=self.use_24hour, use_ampm=not self.use_24hour, lang=self.lang)}"
                 for i, alert in enumerate(alerts)
             ]
-            self.speak(join_list(spoken_list, "and"), wait=True)
+            self.speak(join_word_list(spoken_list, connector="and", sep=",", lang=self.lang), wait=True)
             idx = self.get_response("alert_list_choose_between",
                                     validator=validate_number,
                                     data=dict(length=len(spoken_list)))
-            if idx: 
+            if idx:
                 return alerts[idx - 1]
             return None
         return alerts[0]
@@ -1436,7 +1417,7 @@ class AlertSkill(OVOSSkill):
             return
         else:
             disposition = AlertState[disposition]
-        
+
         matched = self._get_alerts_list(alert_type,
                                         user,
                                         disposition)
@@ -1444,7 +1425,7 @@ class AlertSkill(OVOSSkill):
         data = {alert.ident: alert.serialize for alert in matched}
         self.bus.emit(message.response(data))
 
-    def _get_alerts_list(self, 
+    def _get_alerts_list(self,
                          alert_type: AlertType,
                          user: str = None,
                          disposition: AlertState = AlertState.PENDING,
@@ -1469,7 +1450,7 @@ class AlertSkill(OVOSSkill):
         else:
             LOG.error(f"Invalid alert disposition requested: {disposition}")
             matched_alerts = alerts_list["pending"]
-        
+
         # Optionally filter by name
         if name:
             matched_alerts = list(
@@ -1480,12 +1461,11 @@ class AlertSkill(OVOSSkill):
             )
         return matched_alerts
 
-# GUI methods
+    # GUI methods
     def _display_alert(self, alert: Alert):
         return self._display_alerts(alert.alert_type, [alert])
-    
-    def _display_alerts(self, alert_type: AlertType,
-                              alerts: Optional[List[Alert]] = None):
+
+    def _display_alerts(self, alert_type: AlertType, alerts: Optional[List[Alert]] = None):
         if alerts is None:
             alerts = self.alert_manager.get_pending_alerts(alert_type=alert_type)
 
@@ -1494,8 +1474,7 @@ class AlertSkill(OVOSSkill):
         elif alert_type == AlertType.TIMER:
             self._display_timers(alerts)
         elif alert_type != AlertType.ALL:
-            self._display_list(alerts, 
-                               header=spoken_alert_type(alert_type))
+            self._display_list(alerts, header=spoken_alert_type(alert_type))
 
     def _display_alarms(self, alarms: List[Alert]):
         """
@@ -1505,7 +1484,7 @@ class AlertSkill(OVOSSkill):
         alarms_view = list()
         for alarm in alarms:
             alarms_view.append(build_gui_data(alarm))
-        
+
         self.gui['activeAlarmCount'] = len(alarms_view)
         self.gui['activeAlarms'] = alarms_view
 
@@ -1560,15 +1539,14 @@ class AlertSkill(OVOSSkill):
                 "main": alert.alert_name,
                 "secondary": ""
                 if alert.expiration is None
-                else datetime_display(alert.expiration, alert.until),
+                else datetime_display(alert.expiration, alert.until, alert.lang),
             }
             for alert in alerts
         ]
         self.gui["header"] = header
         self.gui.show_page("ListView")
 
-    def _update_homescreen(self, alert: Alert = None,
-                                 dismiss_notification = False):
+    def _update_homescreen(self, alert: Alert = None, dismiss_notification=False):
         """
         Update homescreen widgets with the current alarms and timers counts.
 
@@ -1579,7 +1557,7 @@ class AlertSkill(OVOSSkill):
         self._update_homescreen_widgets(alert)
         if dismiss_notification:
             self._delete_homescreen_notification(alert)
-    
+
     def _update_homescreen_widgets(self, alert: Alert = None):
         # timer widget
         if alert is None or alert.alert_type == AlertType.TIMER:
@@ -1662,8 +1640,7 @@ class AlertSkill(OVOSSkill):
         """
         alert_id = message.data['timer']['alertId']
         self._dismiss_alert(alert_id, speak=True)
-        LOG.debug(("Timers still active on GUI: "
-                  f"{self.alert_manager.active_gui_timers}"))
+        LOG.debug(f"Timers still active on GUI: {self.alert_manager.active_gui_timers}")
 
     def _event_cancel_alarm(self, message: Message):
         """
@@ -1675,7 +1652,7 @@ class AlertSkill(OVOSSkill):
         elif isinstance(alert_ids, str):
             alert_ids = [alert_ids]
         for alert_id in alert_ids:
-            self._dismiss_alert(alert_id, speak=True)     
+            self._dismiss_alert(alert_id, speak=True)
 
     def _release_gui_alarm(self, alert_id: str):
         alarm = self.alert_manager.get_alert(alert_id)
@@ -1690,7 +1667,7 @@ class AlertSkill(OVOSSkill):
             if self.gui['activeAlarmCount'] != 0 or \
                     self.alert_manager.active_gui_timers:
                 return
-        
+
         if len(self.gui._pages) > 1:
             self.gui.remove_page("AlarmsOverviewCard")
         else:
@@ -1710,12 +1687,12 @@ class AlertSkill(OVOSSkill):
             alert_ids = [alert_ids]
         for alert_id in alert_ids:
             alert = self.alert_manager.get_alert(alert_id)
-            LOG.info(f"GUI Snooze alert: {alert_id}")            
+            LOG.info(f"GUI Snooze alert: {alert_id}")
             self._snooze_alert(alert)
             self.speak_dialog("confirm_snooze_alert",
                               {"name": alert.alert_name,
-                               "duration": nice_duration(
-                                   self.snooze_duration)}, wait=True)
+                               "duration": nice_duration(self.snooze_duration, lang=self.lang)},
+                              wait=True)
 
     def _gui_dismiss_notification(self, message):
         if not message.data.get('alert'):
@@ -1755,7 +1732,7 @@ class AlertSkill(OVOSSkill):
         """
         # As with alert expiration, loop the text and send notification
         # to homescreen if not conversed
-    
+
         timeout = time.time() + self.alert_timeout_seconds
         alert_id = alert.ident
         while self.alert_manager.get_alert_status(alert_id) == \
@@ -1764,7 +1741,7 @@ class AlertSkill(OVOSSkill):
                 "alert_prenotification",
                 {
                     "reminder": alert.alert_name,
-                    "time_until": nice_duration(alert.time_to_expiration),
+                    "time_until": nice_duration(alert.time_to_expiration, lang=self.lang),
                 },
             )
             time.sleep(min(20, self.alert_timeout_seconds))
@@ -1792,7 +1769,7 @@ class AlertSkill(OVOSSkill):
         # (or handled per GUI)
         if alert.ocp_request or alert.alert_type == AlertType.TIMER:
             return
-        
+
         if self.alert_manager.get_alert_status(alert.ident) == AlertState.ACTIVE:
             self.alert_manager.mark_alert_missed(alert.ident)
 
@@ -1829,7 +1806,7 @@ class AlertSkill(OVOSSkill):
             # send ocp request
             if ocp_request(alert, self.bus) is None:
                 alert.ocp_request = None
-        
+
         if not alert.ocp_request:
             if alert.audio_file:
                 LOG.debug(alert.audio_file)
@@ -1846,7 +1823,7 @@ class AlertSkill(OVOSSkill):
             if not to_play:
                 self._speak_notify_expired(alert)
                 return
-        
+
         # display card and register with notification system
         self._display_expiration(alert)
 
@@ -1865,11 +1842,10 @@ class AlertSkill(OVOSSkill):
                 play_audio(to_play).wait(60)
             # TODO this depends on the length of the audio file
             time.sleep(1)
-        
+
         # reset volume
         if not to_play == "ocp":
-            self.bus.emit(Message("mycroft.volume.set",
-                                {"percent": self.original_volume}))
+            self.bus.emit(Message("mycroft.volume.set", {"percent": self.original_volume}))
 
     def _speak_notify_expired(self, alert: Alert):
 
@@ -1891,7 +1867,7 @@ class AlertSkill(OVOSSkill):
             if alert.alert_type in (AlertType.REMINDER, AlertType.EVENT,):
                 self.speak_dialog('expired_reminder',
                                   {'name': name},
-                                   wait=True)
+                                  wait=True)
             elif alert.alert_type == AlertType.TIMER:
                 self.speak_dialog('expired_timer',
                                   {'name': name},
@@ -1900,7 +1876,7 @@ class AlertSkill(OVOSSkill):
                 self.speak_dialog('expired_alert', {'name': name},
                                   wait=True)
             time.sleep(20)
-    
+
     def _ocp_query(self, message: Message):
         kind = message.data.get("media", "media")
         result = None
@@ -1914,14 +1890,14 @@ class AlertSkill(OVOSSkill):
             if dialog == "alarm_ocp_request":
                 self.speak_dialog("ocp_searching")
 
-            query = normalize(query, lang=self.lang, remove_articles=False)
+            normalizer = UtteranceNormalizerPlugin.get_normalizer(lang=self.lang)
+            query = normalizer.normalize(query)
             result = ocp_query(query, message, self.bus)
             if result is None:
                 dialog = "ocp_request_retry"
         return result
-    
-    def _snooze_alert(self, alert: Alert,
-                            duration: Optional[timedelta] = None):
+
+    def _snooze_alert(self, alert: Alert, duration: Optional[timedelta] = None):
         """
         Helper to snooze an alert for the specified duration calling the
         alert manager, update widgets and handle media state
@@ -1941,7 +1917,7 @@ class AlertSkill(OVOSSkill):
             if not self.speak_timer:
                 self.bus.emit(Message("mycroft.volume.set",
                                       {"percent": self.original_volume}))
-        
+
         snoozed_alert = self.alert_manager.snooze_alert(alert.ident,
                                                         duration)
         self._update_homescreen(snoozed_alert)
@@ -1949,16 +1925,13 @@ class AlertSkill(OVOSSkill):
         if not self.alert_manager.get_active_alerts():
             self.deactivate()
 
-    def _dismiss_alert(self, alert_id: str,
-                             drop_dav: bool = False,
-                             speak: bool = False):
+    def _dismiss_alert(self, alert_id: str, drop_dav: bool = False, speak: bool = False):
         """
         Handle a request to dismiss an alert. Removes the first valid entry in
         active, missed, or pending lists.
         Also handles GUI pages and homescreen widgets
 
         :param alert_id: ID of alert to dismiss
-        :param alert_type: AlertType of dismissed alert (used in spoken dialog)
         :param drop_dav: if True, remove from DAV service
         :param speak: if True, speak confirmation of alert dismissal
         """
@@ -1967,7 +1940,7 @@ class AlertSkill(OVOSSkill):
         if disposition == AlertState.REMOVED:
             LOG.debug(f"{alert_id} already removed")
             return
-        
+
         # release from gui
         if alert.alert_type == AlertType.TIMER:
             self.alert_manager.dismiss_alert_from_gui(alert_id)
@@ -1993,16 +1966,16 @@ class AlertSkill(OVOSSkill):
             if alert.stopwatch_mode:
                 self.speak_dialog("stopwatch_delta",
                                   {"delta": spoken_duration(alert.stopwatch)})
-        
+
         # deativate skill if no more active alerts
         if not self.alert_manager.get_active_alerts():
             self.deactivate()
-    
+
     def _activate(self):
         """
         Activate the skill
         """
-        timeout = self.config_core["skills"].get("converse",{}).get("timeout", 300) - 2
+        timeout = self.config_core["skills"].get("converse", {}).get("timeout", 300) - 2
         # repeating event to check if a reactivation is needed
         self.schedule_repeating_event(self.handle_active_state,
                                       when=None,
@@ -2039,7 +2012,3 @@ class AlertSkill(OVOSSkill):
         LOG.debug(f"skill-stop called, all active alerts will be removed")
         for alert in self.alert_manager.get_active_alerts():
             self._dismiss_alert(alert.ident, speak=True)
-
-
-def create_skill():
-    return AlertSkill()
