@@ -36,8 +36,9 @@ import icalendar
 from dateutil.relativedelta import relativedelta
 from json_database.utils import merge_dict
 from ovos_utils.log import LOG
-from ovos_config.locale import get_default_tz
+from ovos_config.locale import get_default_tz, get_default_lang
 from ovos_config import Configuration
+
 
 from ovos_skill_alerts.util import AlertType, DAVType, AlertPriority, Weekdays
 from ovos_skill_alerts.util.dav_utils import process_ical_event, process_ical_todo
@@ -105,7 +106,7 @@ class Alert:
         """
         Returns the lang associated with this alert
         """
-        return self._data.get("lang")
+        return self._data.get("lang") or get_default_lang()
 
     @property
     def created(self) -> dt.datetime:

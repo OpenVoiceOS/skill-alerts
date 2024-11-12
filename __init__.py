@@ -415,11 +415,11 @@ class AlertSkill(OVOSSkill):
                                                    connector="and", sep=",", lang=self.lang)}
             end = [a.until for a in overlapping if a.until]
             if end:
-                dialog_data["begin"] = nice_time(min([a.expiration for a in overlapping]))
-                dialog_data["end"] = nice_time(max(end))
+                dialog_data["begin"] = nice_time(min([a.expiration for a in overlapping]), lang=self.lang)
+                dialog_data["end"] = nice_time(max(end), lang=self.lang)
                 dialog = "alert_overlapping_duration_ask"
             else:
-                dialog_data["begin"] = join_word_list([nice_time(a.expiration) for a in overlapping],
+                dialog_data["begin"] = join_word_list([nice_time(a.expiration, lang=self.lang) for a in overlapping],
                                                       connector="and", sep=",", lang=self.lang)
                 dialog = "alert_overlapping_ask"
 
@@ -1119,7 +1119,7 @@ class AlertSkill(OVOSSkill):
         # This is patching LF type annotation bug
         # noinspection PyTypeChecker
         spoken_alert_time = \
-            nice_time(alert.expiration, self.lang,
+            nice_time(alert.expiration, lang=self.lang,
                       use_24hour=self.use_24hour, use_ampm=not self.use_24hour)
 
         # Schedule alert expirations
@@ -1260,7 +1260,8 @@ class AlertSkill(OVOSSkill):
                         for alert in active:
                             self._snooze_alert(alert, snooze_duration)
                         self.speak_dialog("confirm_snooze_alert",
-                                          {"duration": nice_duration(round(duration.total_seconds()))})
+                                          {"duration": nice_duration(round(duration.total_seconds()),
+                                                                     lang=self.lang)})
                         return True
         return False
 
@@ -1380,7 +1381,7 @@ class AlertSkill(OVOSSkill):
             alerts.sort(key=lambda x: x.expiration)
             spoken_list = [
                 f"{pronounce_number(i + 1)}. \
-                    {nice_date_time(alert.expiration, use_24hour=self.use_24hour, use_ampm=not self.use_24hour)}"
+                    {nice_date_time(alert.expiration, use_24hour=self.use_24hour, use_ampm=not self.use_24hour, lang=self.lang)}"
                 for i, alert in enumerate(alerts)
             ]
             self.speak(join_word_list(spoken_list, connector="and", sep=",", lang=self.lang), wait=True)
@@ -1537,7 +1538,7 @@ class AlertSkill(OVOSSkill):
                 "main": alert.alert_name,
                 "secondary": ""
                 if alert.expiration is None
-                else datetime_display(alert.expiration, alert.until),
+                else datetime_display(alert.expiration, alert.until, alert.lang),
             }
             for alert in alerts
         ]
@@ -1689,8 +1690,8 @@ class AlertSkill(OVOSSkill):
             self._snooze_alert(alert)
             self.speak_dialog("confirm_snooze_alert",
                               {"name": alert.alert_name,
-                               "duration": nice_duration(
-                                   self.snooze_duration)}, wait=True)
+                               "duration": nice_duration(self.snooze_duration, lang=self.lang)},
+                              wait=True)
 
     def _gui_dismiss_notification(self, message):
         if not message.data.get('alert'):
@@ -1739,7 +1740,7 @@ class AlertSkill(OVOSSkill):
                 "alert_prenotification",
                 {
                     "reminder": alert.alert_name,
-                    "time_until": nice_duration(alert.time_to_expiration),
+                    "time_until": nice_duration(alert.time_to_expiration, lang=self.lang),
                 },
             )
             time.sleep(min(20, self.alert_timeout_seconds))

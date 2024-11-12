@@ -90,7 +90,7 @@ def get_requirements(requirements_filename: str):
 
 
 def find_resource_files():
-    resource_base_dirs = ("locale", "gui", "vocab", "dialog", "regex", "res")
+    resource_base_dirs = ("locale", "gui", "res")
     package_data = ["skill.json"]
     for res in resource_base_dirs:
         if path.isdir(path.join(BASE_PATH, res)):

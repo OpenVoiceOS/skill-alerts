@@ -451,8 +451,8 @@ class TestSkill(unittest.TestCase):
         overlapping_reminder = _get_message_from_file(
             "reminder_event_length_at_time.json"
         )
-        begin = nice_time(self.valid_event.expiration)
-        end = nice_time(self.valid_event.until)
+        begin = nice_time(self.valid_event.expiration, lang="en-us")
+        end = nice_time(self.valid_event.until, lang="en-us")
         self.skill.handle_create_event(overlapping_reminder)
         self.skill.ask_yesno.assert_called_once()
         self.skill.ask_yesno.assert_called_with(
@@ -469,7 +469,7 @@ class TestSkill(unittest.TestCase):
         overlapping_reminder2 = _get_message_from_file(
             "reminder_event_length_at_time2.json"
         )
-        begin = nice_time(self.valid_event2.expiration)
+        begin = nice_time(self.valid_event2.expiration, lang="en-us")
         self.skill.handle_create_event(overlapping_reminder2)
         self.skill.ask_yesno.assert_called_with(
             "alert_overlapping_ask", {"event": "valid event 2",
@@ -718,7 +718,7 @@ class TestSkill(unittest.TestCase):
         # check in a time range (note: 1 minute gap 11:59-00:00)
         check_message.data["utterance"] = \
             f"are there any events between {day} 00:00 am and 11:59 pm"
-        begin = nice_time(self.valid_event.expiration, use_ampm=True)
+        begin = nice_time(self.valid_event.expiration, use_ampm=True, lang="en-us")
 
         self.skill.handle_event_timeframe_check(check_message)
         self.assertEqual(self.skill.speak_dialog.call_count, 2)
@@ -793,9 +793,8 @@ class TestSkill(unittest.TestCase):
             {
                 "kind": "alarm",
                 "name": "",
-                "begin": nice_date_time(self.valid_alarm_1.expiration, use_ampm=True),
-                "remaining": spoken_duration(self.valid_alarm_1.expiration,
-                                             lang="en-us")
+                "begin": nice_date_time(self.valid_alarm_1.expiration, use_ampm=True, lang="en-us"),
+                "remaining": spoken_duration(self.valid_alarm_1.expiration, lang="en-us")
             },
             wait=True
         )
@@ -806,9 +805,8 @@ class TestSkill(unittest.TestCase):
             {
                 "kind": "timer",
                 "name": "oven",
-                "begin": nice_time(self.valid_timer.expiration, use_ampm=True),
-                "remaining": spoken_duration(self.valid_timer.expiration,
-                                                   lang="en-us")
+                "begin": nice_time(self.valid_timer.expiration, use_ampm=True, lang="en-us"),
+                "remaining": spoken_duration(self.valid_timer.expiration, lang="en-us")
             },
             wait=True
         )
@@ -820,10 +818,9 @@ class TestSkill(unittest.TestCase):
             {
                 "kind": "reminder",
                 "name": self.valid_reminder.alert_name,
-                "begin": nice_date_time(self.valid_reminder.expiration, use_ampm=True),
-                "end": nice_date_time(self.valid_reminder.until, use_ampm=True),
-                "remaining": spoken_duration(self.valid_reminder.expiration,
-                                                   lang="en-us")
+                "begin": nice_date_time(self.valid_reminder.expiration, use_ampm=True, lang="en-us"),
+                "end": nice_date_time(self.valid_reminder.until, use_ampm=True, lang="en-us"),
+                "remaining": spoken_duration(self.valid_reminder.expiration, lang="en-us")
             },
             wait=True
         )
@@ -835,9 +832,8 @@ class TestSkill(unittest.TestCase):
             {
                 "kind": "timer",
                 "name": "oven",
-                "begin": nice_time(self.valid_timer.expiration, use_ampm=True),
-                "remaining": spoken_duration(self.valid_timer.expiration,
-                                                   lang="en-us")
+                "begin": nice_time(self.valid_timer.expiration, use_ampm=True, lang="en-us"),
+                "remaining": spoken_duration(self.valid_timer.expiration, lang="en-us")
             },
             wait=True
         )
@@ -1483,10 +1479,10 @@ class TestSkill(unittest.TestCase):
                 "name": "appointment",
                 "kind": "translated",
                 "begin": nice_time(
-                    today_alert.expiration, use_24hour=False, use_ampm=True
+                    today_alert.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
                 "end": nice_time(
-                    today_alert.until, use_24hour=False, use_ampm=True
+                    today_alert.until, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
                 "remaining": "one minute",
             },
@@ -1505,10 +1501,9 @@ class TestSkill(unittest.TestCase):
                 "name": "wakeup",
                 "kind": "translated",
                 "begin": nice_date_time(
-                    one_time.expiration, use_24hour=False, use_ampm=True
+                    one_time.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(one_time.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(one_time.expiration, lang="en-us")
             },
         )
 
@@ -1529,10 +1524,9 @@ class TestSkill(unittest.TestCase):
                 "kind": "translated",
                 "repeat": "translated",
                 "begin": nice_time(
-                    weekend.expiration, use_24hour=False, use_ampm=True
+                    weekend.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(weekend.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(weekend.expiration, lang="en-us")
             },
         )
 
@@ -1559,10 +1553,9 @@ class TestSkill(unittest.TestCase):
                 "kind": "translated",
                 "repeat": "translated",
                 "begin": nice_time(
-                    weekday.expiration, use_24hour=False, use_ampm=True
+                    weekday.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(weekday.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(weekday.expiration, lang="en-us")
             },
         )
 
@@ -1591,10 +1584,9 @@ class TestSkill(unittest.TestCase):
                 "repeat": "translated",
                 "kind": "translated",
                 "begin": nice_time(
-                    daily.expiration, use_24hour=False, use_ampm=True
+                    daily.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(daily.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(daily.expiration, lang="en-us")
             },
         )
 
@@ -1615,10 +1607,9 @@ class TestSkill(unittest.TestCase):
                 "repeat": "translated",
                 "kind": "translated",
                 "begin": nice_time(
-                    weekly.expiration, use_24hour=False, use_ampm=True
+                    weekly.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(daily.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(daily.expiration, lang="en-us")
             },
         )
 
@@ -1635,12 +1626,11 @@ class TestSkill(unittest.TestCase):
             {
                 "name": "take pill",
                 "kind": "translated",
-                "repeat": nice_duration(dt.timedelta(hours=8).total_seconds()),
+                "repeat": nice_duration(dt.timedelta(hours=8).total_seconds(), lang="en-us"),
                 "begin": nice_time(
-                    eight_hour.expiration, use_24hour=False, use_ampm=True
+                    eight_hour.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
-                "remaining": spoken_duration(daily.expiration,
-                                                   lang="en-us")
+                "remaining": spoken_duration(daily.expiration, lang="en-us")
             },
         )
 
@@ -1661,7 +1651,7 @@ class TestSkill(unittest.TestCase):
                 "name": "",
                 "kind": "timer",
                 "begin": nice_time(
-                    two_minute.expiration, use_24hour=False, use_ampm=True
+                    two_minute.expiration, use_24hour=False, use_ampm=True, lang="en-us"
                 ),
                 "remaining": "two minutes"
             },

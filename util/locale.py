@@ -20,24 +20,28 @@ from ovos_workshop.skills.ovos import join_word_list
 
 
 def datetime_display(begin: dt.datetime,
-                     end: Optional[dt.datetime] = None) -> str:
+                     end: Optional[dt.datetime] = None,
+                     lang: str = None) -> str:
+    lang = lang or get_default_lang()
     use_24h = use_24h_format()
     date_format = get_date_format()
 
     display = date_display(begin, date_format) + " " + \
-              time_display(begin, use_24h)
+              time_display(begin, use_24h, lang=lang)
     if end and end.date() != begin.date():
         display += " - " + date_display(end, date_format) + " " + \
-                   time_display(end, use_24h)
+                   time_display(end, use_24h, lang=lang)
     elif end:
-        display += " - " + time_display(end, use_24h)
+        display += " - " + time_display(end, use_24h, lang=lang)
 
     return display
 
 
 def time_display(dt_obj: dt.datetime,
-                 use_24h: bool = True) -> str:
-    return nice_time(dt_obj,
+                 use_24h: bool = True,
+                 lang: str = None) -> str:
+    lang = lang or get_default_lang()
+    return nice_time(dt_obj, lang=lang,
                      speech=False,
                      use_24hour=use_24h,
                      use_ampm=not use_24h)
@@ -51,6 +55,8 @@ def date_display(dt_obj: dt.datetime,
         display = dt_obj.strftime("%-d/%-m/%Y")
     elif date_format == "YMD":
         display = dt_obj.strftime("%Y/%-m/%-d")
+    else:
+        raise ValueError(f"Invalid date format: {date_format}")
     return display
 
 
@@ -134,7 +140,6 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     :param lang: Language to format response in
     :return: speakable duration string
     """
-    load_language(lang or get_default_lang())
     if isinstance(alert_time, dt.datetime):
         anchor_time = anchor_time or \
                       dt.datetime.now(alert_time.tzinfo).replace(microsecond=0)
@@ -156,8 +161,7 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     else:
         _seconds = remaining_time.total_seconds()
 
-    return nice_duration(int(_seconds),
-                         lang=lang)
+    return nice_duration(int(_seconds), lang=lang or get_default_lang())
 
 
 def get_abbreviation(wd: Weekdays) -> str:
@@ -240,8 +244,7 @@ def get_alert_dialog_data(alert: Alert,
     :param lang: User language to be spoken
     :returns: dict dialog_data to pass to `speak_dialog`
     """
-    lang = lang or get_default_lang()
-    load_language(lang)
+    lang = lang or alert.lang
     use_24hour = use_24h_format()
 
     expired_time = alert.data["next_expiration_time"]
@@ -255,11 +258,11 @@ def get_alert_dialog_data(alert: Alert,
     if anchor_date.date() != expired_time.date() and \
             not alert.has_repeat:
         if alert.is_all_day:
-            spoken_time = f"{nice_date(expired_time, lang)}, "
+            spoken_time = f"{nice_date(expired_time, lang=lang)}, "
             spoken_time += translate("whole_day", lang)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_date_time(expired_time, lang,
+            spoken_time = nice_date_time(expired_time, lang=lang,
                                          use_24hour=use_24hour,
                                          use_ampm=not use_24hour)
     else:
@@ -267,7 +270,7 @@ def get_alert_dialog_data(alert: Alert,
             spoken_time = translate("whole_day", lang)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_time(expired_time, lang,
+            spoken_time = nice_time(expired_time, lang=lang,
                                     use_24hour=use_24hour,
                                     use_ampm=not use_24hour)
 
@@ -282,12 +285,12 @@ def get_alert_dialog_data(alert: Alert,
     # add event end
     if alert.until and not alert.is_all_day:
         if anchor_date.date() != alert.until.date():
-            spoken_time = nice_date_time(alert.until, lang,
+            spoken_time = nice_date_time(alert.until, lang=lang,
                                          use_24hour=use_24hour,
                                          use_ampm=not use_24hour)
         else:
             # noinspection PyTypeChecker
-            spoken_time = nice_time(alert.until, lang,
+            spoken_time = nice_time(alert.until, lang=lang,
                                     use_24hour=use_24hour,
                                     use_ampm=not use_24hour)
         data["end"] = spoken_time
@@ -305,10 +308,10 @@ def get_alert_dialog_data(alert: Alert,
                                             connector="and", sep=",", lang=lang)
     elif alert.repeat_frequency:
         data["repeat"] = nice_duration(
-            alert.repeat_frequency.total_seconds())
+            alert.repeat_frequency.total_seconds(), lang=lang)
 
     if alert.prenotification:
-        data["prenotification"] = nice_time(alert.prenotification)
+        data["prenotification"] = nice_time(alert.prenotification, lang=lang)
 
     return data
 

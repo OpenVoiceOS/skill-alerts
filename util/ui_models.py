@@ -59,13 +59,13 @@ def build_timer_data(alert: Alert) -> dict:
     if delta_seconds.total_seconds() < 0:
         percent_remaining = 0
         human_delta = '-' + nice_duration(-1 * delta_seconds.total_seconds(),
-                                          speech=False)
+                                          speech=False, lang=alert.lang)
     else:
         total_time = (datetime.now(alert.timezone).timestamp() -
                       start_time.timestamp()) + \
                      delta_seconds.total_seconds()
         percent_remaining = delta_seconds.total_seconds() / total_time
-        human_delta = nice_duration(delta_seconds.total_seconds(), speech=False)
+        human_delta = nice_duration(delta_seconds.total_seconds(), speech=False, lang=alert.lang)
 
     return {
         'alertId': alert.ident,
@@ -87,7 +87,7 @@ def build_alarm_data(alert: Alert) -> dict:
     use_24h = use_24h_format()
     alarm_time = nice_time(
         datetime.fromisoformat(alert.data["next_expiration_time"]),
-        speech=False, use_ampm=not use_24h, use_24hour=use_24h
+        speech=False, use_ampm=not use_24h, use_24hour=use_24h, lang=alert.lang
     )
     if use_24h:
         alarm_time = alarm_time
@@ -111,7 +111,7 @@ def build_alarm_data(alert: Alert) -> dict:
         "alarmExpired": alarm_expired,
         "alarmIndex": alarm_index,
         "alarmRepeat": alert.has_repeat,
-        "alarmRepeatStr" : alarm_repeat_str
+        "alarmRepeatStr": alarm_repeat_str
     }
 
 
@@ -141,11 +141,11 @@ def create_repeat_str(alert: Alert) -> str:
         repeat_str = ",".join(sequences)
     elif alert.repeat_frequency:
         repeat_str = nice_duration(alert.repeat_frequency.total_seconds(),
-                                   speech=False)
+                                   speech=False, lang=alert.lang)
 
     if alert.until:
         if repeat_str:
             repeat_str += "|"    
-        repeat_str += f"{translate('until')} {datetime_display(alert.until.date())}"
+        repeat_str += f"{translate('until')} {datetime_display(alert.until.date(), lang=alert.lang)}"
             
     return repeat_str
