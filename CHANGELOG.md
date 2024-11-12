@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.1.6a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.6a1) (2024-11-06)
+## [0.1.7a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.7a1) (2024-11-12)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.5...0.1.6a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.6...0.1.7a1)
 
 **Merged pull requests:**
 
-- fix: usage\_of\_deprecated\_method [\#24](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/24) ([JarbasAl](https://github.com/JarbasAl))
+- fix: drop lingua-franca [\#26](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/26) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
