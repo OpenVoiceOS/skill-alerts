@@ -591,11 +591,11 @@ class AlertSkill(OVOSSkill):
 
         if old_media:
             self.speak_dialog("media_type_changed",
-                              {"old": translate(old_media),
-                               "new": translate(new_media)})
+                              {"old": translate(old_media, lang=self.lang),
+                               "new": translate(new_media, lang=self.lang)})
         else:
             self.speak_dialog("media_type_set",
-                              {"new": translate(new_media)})
+                              {"new": translate(new_media, lang=self.lang)})
 
     # Query Alerts
     @intent_handler(IntentBuilder("ListAlerts").require("query")
@@ -828,7 +828,7 @@ class AlertSkill(OVOSSkill):
             return
         if not alert:
             alert = Alert.create(
-                alert_name=name, alert_type=AlertType.TODO, dav_type=DAVType.VTODO
+                alert_name=name, alert_type=AlertType.TODO, dav_type=DAVType.VTODO, lang=self.lang
             )
         if self.alert_manager.dav_active:
             self.specify_dav_attributes(alert,
@@ -873,6 +873,7 @@ class AlertSkill(OVOSSkill):
                 dav_calendar=todo.calendar,
                 dav_service=todo.service,
                 context=dict(related_to=todo.ident),
+                lang=self.lang
             )
             self.alert_manager.add_alert(alert)
         self.speak_dialog(
@@ -1157,9 +1158,9 @@ class AlertSkill(OVOSSkill):
                 alert.expiration,
                 self.lang)
         elif len(alert.repeat_days) == 7:
-            repeat_interval = translate("day", self.lang)
+            repeat_interval = translate("day", lang=self.lang)
         elif alert.repeat_days == WEEKDAYS:
-            repeat_interval = translate("weekday", self.lang)
+            repeat_interval = translate("weekday", lang=self.lang)
         else:
             repeat_interval = join_word_list([spoken_weekday(day, self.lang)
                                          for day in alert.repeat_days],

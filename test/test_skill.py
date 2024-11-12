@@ -43,7 +43,7 @@ from ovos_utils.events import EventSchedulerInterface
 from ovos_utils.messagebus import FakeBus
 from ovos_workshop.skills import OVOSSkill
 
-from ovos_config.locale import load_language, get_default_tz
+from ovos_config.locale import get_default_tz
 
 from ovos_skill_alerts import AlertSkill
 from ovos_skill_alerts.util import AlertPriority, AlertState, AlertType, DAVType, Weekdays, EVERYDAY
@@ -129,9 +129,6 @@ class TestSkill(unittest.TestCase):
         cls.skill.ask_for_prenotification = Mock()
         cls.skill.alert_manager.get_dav_calendar = Mock(return_value=FakeCalendar())
         cls.skill.alert_manager.get_dav_calendars = Mock(return_value=[FakeCalendar()])
-
-        # Setup alerts
-        load_language("en-us")
 
         uuid_subitem1 = str(uuid4())
         uuid_subitem2 = str(uuid4())
@@ -3672,7 +3669,6 @@ class TestParseUtils(unittest.TestCase):
 
 @unittest.skip('Work in progress')
 class TestUIModels(unittest.TestCase):
-    load_language("en")
 
     def test_build_timer_data(self):
         from ovos_skill_alerts.util.ui_models import build_timer_data

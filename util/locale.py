@@ -5,7 +5,8 @@ from os.path import join, dirname
 from typing import Optional, List, Union, Tuple
 
 from ovos_bus_client.message import Message
-from ovos_config.locale import get_default_lang, load_language
+from ovos_bus_client.util import get_message_lang
+from ovos_config.locale import get_default_lang
 from ovos_date_parser import (
     nice_duration,
     nice_time,
@@ -70,8 +71,7 @@ def translate(word, lang=None):
     raise FileNotFoundError
 
 
-def spoken_alert_type(alert_type: AlertType,
-                      lang: str = None) -> str:
+def spoken_alert_type(alert_type: AlertType, lang: str = None) -> str:
     """
     Get a translated string for the specified alert_type
     :param alert_type: AlertType to be spoken
@@ -140,6 +140,7 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     :param lang: Language to format response in
     :return: speakable duration string
     """
+    lang = lang or get_default_lang()
     if isinstance(alert_time, dt.datetime):
         anchor_time = anchor_time or \
                       dt.datetime.now(alert_time.tzinfo).replace(microsecond=0)
@@ -161,24 +162,24 @@ def spoken_duration(alert_time: Union[dt.timedelta, dt.datetime],
     else:
         _seconds = remaining_time.total_seconds()
 
-    return nice_duration(int(_seconds), lang=lang or get_default_lang())
+    return nice_duration(int(_seconds), lang=lang)
 
 
-def get_abbreviation(wd: Weekdays) -> str:
+def get_abbreviation(wd: Weekdays, lang = None) -> str:
     if wd == Weekdays.MON:
-        return translate("abbreviation_monday")
+        return translate("abbreviation_monday", lang=lang)
     elif wd == Weekdays.TUE:
-        return translate("abbreviation_tuesday")
+        return translate("abbreviation_tuesday", lang=lang)
     elif wd == Weekdays.WED:
-        return translate("abbreviation_wednesday")
+        return translate("abbreviation_wednesday", lang=lang)
     elif wd == Weekdays.THU:
-        return translate("abbreviation_thursday")
+        return translate("abbreviation_thursday", lang=lang)
     elif wd == Weekdays.FRI:
-        return translate("abbreviation_friday")
+        return translate("abbreviation_friday", lang=lang)
     elif wd == Weekdays.SAT:
-        return translate("abbreviation_saturday")
+        return translate("abbreviation_saturday", lang=lang)
     elif wd == Weekdays.SUN:
-        return translate("abbreviation_sunday")
+        return translate("abbreviation_sunday", lang=lang)
 
 
 def get_alert_type_from_intent(message: Message) \
@@ -188,7 +189,7 @@ def get_alert_type_from_intent(message: Message) \
     :param message: Message associated with intent match
     :returns: tuple of AlertType requested and spoken_type 
     """
-    lang = message.data.get("lang")
+    lang = get_message_lang(message)
     if message.data.get("alarm") or message.data.get("wake"):
         return AlertType.ALARM, translate("alarm", lang)
     elif message.data.get('timer'):

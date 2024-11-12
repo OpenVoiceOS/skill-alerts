@@ -32,8 +32,8 @@ from typing import Optional, List, Union, Tuple, Any
 from uuid import uuid4
 
 from dateutil.relativedelta import relativedelta
-from ovos_bus_client import Message
-from ovos_config.locale import get_default_lang, load_language, get_default_tz
+from ovos_bus_client.message import Message, dig_for_message
+from ovos_config.locale import get_default_lang, get_default_tz
 from ovos_date_parser import nice_time, nice_day, extract_datetime, extract_duration
 from ovos_number_parser import extract_number
 from ovos_skill_alerts.util import AlertPriority, Weekdays, AlertType, DAVType, LOCAL_USER
@@ -49,6 +49,7 @@ from ovos_skill_alerts.util.locale import (
 from ovos_utils.log import LOG
 from ovos_utterance_normalizer import UtteranceNormalizerPlugin
 from rapidfuzz import fuzz
+from ovos_bus_client.util import get_message_lang
 
 
 class Tokens(list):
@@ -62,7 +63,7 @@ class Tokens(list):
 
     @property
     def lang(self):
-        return self.message.data.get("lang") or get_default_lang()
+        return get_message_lang(self.message)
 
     def unmatched(self, original=False):
         if original:
@@ -82,7 +83,7 @@ class Tokens(list):
             return
 
         time_data = []
-        lang = self.message.data.get("lang") or get_default_lang()
+        lang = get_message_lang(self.message)
         for i, token in enumerate(self):
             if self.is_matched(token):
                 continue
@@ -119,7 +120,7 @@ def tokenize_utterance(message: Message) -> Tokens:
     :returns: list of utterance tokens where a tag defines a token
     """
     utterance: str = message.data.get("utterance", "").lower()
-    lang = message.data.get("lang") or get_default_lang()
+    lang = get_message_lang(message)
     if utterance is None:
         return Tokens([], message)
 
@@ -180,7 +181,6 @@ def get_default_alert_name(alert_time: Union[dt.date, dt.datetime, dt.timedelta]
         isinstance(alert_time, dt.datetime) else get_default_tz()
     now_time = now_time or dt.datetime.now(tz=timezone)
     lang = lang or get_default_lang()
-    load_language(lang)
     if alert_type == AlertType.TIMER:
         time_str = spoken_duration(alert_time, now_time, lang)
     # TODO ordinalize (LF)
@@ -201,7 +201,7 @@ def has_default_name(alert: Alert, lang: str = None) -> bool:
     :param lang: language to format response in
     :return: True if alert_name is the default name for the alert
     """
-    lang = lang or get_default_lang()
+    lang = lang or alert.lang
     expiration = alert.expiration.date() if alert.is_all_day else alert.expiration
     default_name = get_default_alert_name(expiration,
                                           alert.alert_type,
@@ -218,7 +218,7 @@ def build_alert_from_intent(message: Message) -> Optional[Alert]:
     :param timezone: Timezone for user associated with request
     :returns: Alert extracted from utterance or None if missing required params
     """
-    lang = message.data.get("lang") or get_default_lang()
+    lang = get_message_lang(message)
     LOG.debug(f"{lang}, {type(lang)}")
 
     data = dict()
@@ -275,7 +275,7 @@ def build_alert_from_intent(message: Message) -> Optional[Alert]:
     data["alert_type"] = alert_type
     if alert_type == AlertType.TODO:
         data["dav_type"] = DAVType.VTODO
-
+    data["lang"] = lang
     return Alert.create(**data)
 
 
@@ -290,8 +290,7 @@ def parse_repeat_from_message(message: Message,
     :returns: list of parsed repeat Weekdays or timedelta between occurrences
     """
     repeat_days = list()
-    lang = message.data.get("lang") or get_default_lang()
-    load_language(lang)
+    lang = get_message_lang(message)
     if message.data.get("everyday"):
         repeat_days = [Weekdays(i) for i in range(0, 7)]
     elif message.data.get("weekends"):
@@ -363,8 +362,7 @@ def parse_end_condition_from_message(message: Message,
     :param timezone: timezone of request, defaults to mycroft location
     :returns: extracted datetime of end condition, else None
     """
-    lang = message.data.get("lang") or get_default_lang()
-    load_language(lang)
+    lang = get_message_lang(message)
 
     tokens = tokens or tokenize_utterance(message)
     timezone = timezone or get_default_tz()
@@ -412,8 +410,7 @@ def parse_alert_time_from_message(message: Message,
     :param anchor_time: The base datetime the utterance is relative to
     :returns: Parsed datetime for the alert or None if no time is extracted
     """
-    lang = message.data.get("lang") or get_default_lang()
-    load_language(lang)
+    lang = get_message_lang(message)
 
     timezone = timezone or get_default_tz()
     tokens = tokens or tokenize_utterance(message)
@@ -496,7 +493,7 @@ def parse_alert_priority_from_message(message: Message,
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
     """
     tokens = tokens or tokenize_utterance(message)
-    lang = message.data.get("lang") or get_default_lang()
+    lang = get_message_lang(message)
 
     priority = AlertPriority.AVERAGE.value
     if message.data.get("priority"):
@@ -512,12 +509,9 @@ def parse_alert_name_from_message(message: Message,
     Try to parse an alert name from unparsed tokens
     :param message: Message associated with the request
     :param tokens: optional tokens parsed from message by `tokenize_utterances`
-    :param strip_datetimes: if True, ignore any passed tokens containing times
-    :param articles: list of words to strip from a candidate alert name
     :returns: Best guess at a name extracted from tokens
     """
-    lang = message.data.get("lang") or get_default_lang()
-    load_language(lang)
+    lang = get_message_lang(message)
 
     tokens = tokens or tokenize_utterance(message)
     tokens.strip_time()
@@ -571,7 +565,7 @@ def parse_alert_context_from_message(message: Message) -> dict:
         "destination": message.context.get("destination") or "audio",
         # "session": message.context.get("session") or dict(),
         "user": message.context.get("user") or LOCAL_USER,
-        "lang": message.data.get("lang") or get_default_lang(),
+        "lang": get_message_lang(message),
         "ident": message.context.get("ident") or str(uuid4()),
         "origin_ident": message.context.get('ident'),
         "created": message.context.get("timing",
@@ -582,11 +576,10 @@ def parse_alert_context_from_message(message: Message) -> dict:
 
 # TODO: no need for timezone in the signature
 def extract_dt_or_duration(
-        text: str,
+        text: str, lang: str,
         anchor_time: dt.datetime = None,
         timezone: dt.tzinfo = None,
-        add: bool = True,
-        lang=None
+        add: bool = True
 ) -> Union[dt.datetime, dt.timedelta, None]:
     """
     Helper to extract either a duration or datetime
@@ -620,18 +613,17 @@ def parse_relative_time_from_message(message: Message,
                                      tokens: Optional[Tokens] = None,
                                      timezone: Optional[dt.tzinfo] = None,
                                      anchor_time: Optional[dt.datetime] = None):
-    lang = message.data.get("lang") or get_default_lang()
+    lang = get_message_lang(message)
     earlier = "earlier" in message.data
-    load_language(lang)
 
     timezone = timezone or get_default_tz()
     tokens = tokens or tokenize_utterance(message)
 
     for token in tokens.unmatched():
-        time_, remainder = extract_dt_or_duration(token,
+        time_, remainder = extract_dt_or_duration(token, lang,
                                                   anchor_time,
                                                   timezone,
-                                                  not earlier, lang=lang)
+                                                  not earlier)
         if time_:
             tokens[tokens.index(token)] = remainder
             return time_
@@ -664,22 +656,24 @@ def parse_timeframe_from_message(message: Message,
     return begin, end
 
 
-def validate_dt_or_delta(response: str, lang: str = None) -> Union[dt.datetime, dt.timedelta, str]:
+def validate_dt_or_delta(response: str) -> Union[dt.datetime, dt.timedelta, str]:
     """
     Validates if the sentence contains a datetime or duration
     """
-    lang = lang or get_default_lang()
+    message = dig_for_message()  # used inside get_response
+    lang = get_message_lang(message) if message else get_default_lang()
     if voc_match(response, "no", lang):
         return "no"
     else:
         return extract_dt_or_duration(response, lang=lang)[0]
 
 
-def validate_dt(response: str, lang: str = None) -> Union[dt.datetime, str]:
+def validate_dt(response: str) -> Union[dt.datetime, str]:
     """
     Validates if the sentence contains a datetime
     """
-    lang = lang or get_default_lang()
+    message = dig_for_message()  # used inside get_response
+    lang = get_message_lang(message) if message else get_default_lang()
     if voc_match(response, "no", lang):
         return "no"
     else:
@@ -687,8 +681,9 @@ def validate_dt(response: str, lang: str = None) -> Union[dt.datetime, str]:
         return dt_ if dt_ is None else dt_[0]
 
 
-def validate_number(response: str, lang: str = None) -> int:
-    lang = lang or get_default_lang()
+def validate_number(response: str) -> int:
+    message = dig_for_message()  # used inside get_response
+    lang = get_message_lang(message) if message else get_default_lang()
     num = extract_number(response, lang=lang)
     if num:
         return int(num)

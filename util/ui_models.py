@@ -102,7 +102,7 @@ def build_alarm_data(alert: Alert) -> dict:
     if alert.has_repeat:
         alarm_repeat_str = create_repeat_str(alert)
     else:
-        alarm_repeat_str = translate("once").title()
+        alarm_repeat_str = translate("once", lang=alert.lang).title()
 
     return {
         "alarmTime": alarm_time,
@@ -130,8 +130,8 @@ def create_repeat_str(alert: Alert) -> str:
     if alert.repeat_days:
         sequences = get_sequences(list(alert.repeat_days))
         for i, sequence in enumerate(sequences):
-            first = get_abbreviation(min(sequence))
-            last = get_abbreviation(max(sequence))
+            first = get_abbreviation(min(sequence), lang=alert.lang)
+            last = get_abbreviation(max(sequence), lang=alert.lang)
             if len(sequence) > 2:                
                 sequences[i] = f"{first}-{last}"
             elif len(sequence) == 2:
@@ -146,6 +146,6 @@ def create_repeat_str(alert: Alert) -> str:
     if alert.until:
         if repeat_str:
             repeat_str += "|"    
-        repeat_str += f"{translate('until')} {datetime_display(alert.until.date(), lang=alert.lang)}"
+        repeat_str += f"{translate('until', lang=alert.lang)} {datetime_display(alert.until.date(), lang=alert.lang)}"
             
     return repeat_str

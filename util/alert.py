@@ -683,6 +683,7 @@ class Alert:
         dav_calendar: str = None,
         dav_service: str = None,
         context: dict = None,
+        lang: str = None
     ):
         """
         Object representing an arbitrary alert
@@ -768,6 +769,7 @@ class Alert:
             "dav_service": dav_service,
             "dav_synchron": False,
         })
+        data["lang"] = lang or get_default_lang()
         return Alert(data)
 
 
