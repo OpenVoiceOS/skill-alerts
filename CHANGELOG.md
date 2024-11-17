@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.1.8a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.8a1) (2024-11-17)
+## [0.1.9a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.9a1) (2024-11-17)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.7...0.1.8a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.8...0.1.9a1)
 
 **Merged pull requests:**
 
-- fix: skilljson [\#28](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/28) ([JarbasAl](https://github.com/JarbasAl))
+- added italian [\#30](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/30) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
 
 
 
