@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.1.9a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.9a1) (2024-11-17)
+## [0.1.10a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.10a1) (2024-11-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.8...0.1.9a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.9...0.1.10a1)
 
 **Merged pull requests:**
 
-- added italian [\#30](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/30) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
+- fix:allow workshop 3.0.0 [\#33](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/33) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
