@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.1.13a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.13a1) (2024-11-30)
+## [0.1.14a1](https://github.com/OpenVoiceOS/ovos-skill-alerts/tree/0.1.14a1) (2024-12-02)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.12...0.1.13a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-skill-alerts/compare/0.1.13...0.1.14a1)
 
 **Merged pull requests:**
 
-- de-de/translate [\#41](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/41) ([gitlocalize-app[bot]](https://github.com/apps/gitlocalize-app))
+- import galician translations [\#43](https://github.com/OpenVoiceOS/ovos-skill-alerts/pull/43) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
