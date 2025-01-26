@@ -16,7 +16,7 @@ from ovos_date_parser import (
 from ovos_skill_alerts.util import AlertType, Weekdays, WEEKDAYS, WEEKENDS, EVERYDAY
 from ovos_skill_alerts.util.alert import Alert
 from ovos_skill_alerts.util.config import use_24h_format, get_date_format
-from ovos_utils.bracket_expansion import expand_options
+from ovos_utils.bracket_expansion import expand_template
 from ovos_workshop.skills.ovos import join_word_list
 
 
@@ -106,7 +106,7 @@ def get_words_list(res_name, lang: str = None) -> List[str]:
             for entry in entries:
                 if not entry or entry.startswith("#"):
                     continue
-                word_list.extend(expand_options(entry))
+                word_list.extend(expand_template(entry))
             return word_list
     return list()
 
